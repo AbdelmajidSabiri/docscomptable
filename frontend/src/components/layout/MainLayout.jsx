@@ -1,33 +1,50 @@
-// src/components/layout/MainLayout.jsx
-import { Outlet } from 'react-router-dom';
 import { useContext } from 'react';
+import { Box } from '@mui/material';
+import { Outlet } from 'react-router-dom';
+import Header from '../common/Header';
+import Sidebar from '../common/Sidebar';
+import Footer from '../common/Footer';
 import { AuthContext } from '../../contexts/AuthContext';
-import Header from './Header';
-import Sidebar from './Sidebar';
-import Footer from './Footer';
 
 const MainLayout = () => {
-  const { isAuthenticated, loading } = useContext(AuthContext);
+  const { user, loading } = useContext(AuthContext);
   
   if (loading) {
-    return <div className="loading">Loading...</div>;
-  }
-  
-  if (!isAuthenticated) {
-    return <Outlet />;
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh' 
+      }}>
+        Loading...
+      </Box>
+    );
   }
   
   return (
-    <div className="app-container">
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Header />
-      <div className="main-content">
-        <Sidebar />
-        <div className="page-content">
+      
+      <Box sx={{ display: 'flex', flex: 1 }}>
+        {user && <Sidebar />}
+        
+        <Box
+          component="main"
+          sx={{
+            flexGrow: 1,
+            p: 3,
+            width: '100%',
+            pt: 10, // Space for header
+            ml: user ? { sm: '240px' } : 0, // Space for sidebar when user is logged in
+          }}
+        >
           <Outlet />
-        </div>
-      </div>
+        </Box>
+      </Box>
+      
       <Footer />
-    </div>
+    </Box>
   );
 };
 

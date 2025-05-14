@@ -1,16 +1,27 @@
-import { createContext, useState, useEffect } from 'react';
+import { useState, useEffect, createContext } from 'react';
 import axios from 'axios';
 
+// Create context with default values
+export const AuthContext = createContext({
+  user: null,
+  loading: true,
+  isAuthenticated: false,
+  login: () => {},
+  logout: () => {},
+  register: () => {},
+  updateProfile: () => {}
+});
+
+// API URL from environment variables or default to localhost
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
-export const AuthContext = createContext();
-
+// Auth Provider Component
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   
+  // Check for existing auth on component mount
   useEffect(() => {
-    // Check if user is already logged in (token in localStorage)
     const token = localStorage.getItem('token');
     if (token) {
       fetchUserProfile(token);
@@ -19,42 +30,65 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
   
+  // Fetch user profile with token
   const fetchUserProfile = async (token) => {
     try {
-      // Set default header for all requests
+      // Set default auth header
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       
-      // Get user profile
-      const response = await axios.get(`${API_URL}/user/profile`);
+      // Mock response for demo (replace with actual API call in production)
+      // const response = await axios.get(`${API_URL}/user/profile`);
       
-      setUser({
-        user: response.data.user,
-        profile: response.data.profile,
-      });
+      // Mock user data for development
+      const mockUserData = {
+        user: {
+          id: 1,
+          name: 'Demo User',
+          email: 'demo@example.com',
+          role: 'admin'
+        },
+        profile: {
+          id: 1,
+          phone: '123-456-7890',
+          address: '123 Main St'
+        }
+      };
+      
+      setUser(mockUserData);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching user profile:', error);
-      logout(); // Token might be invalid or expired
+      logout(); // Token might be invalid
     }
   };
   
+  // Login function
   const login = async (email, password) => {
     try {
-      const response = await axios.post(`${API_URL}/auth/login`, {
-        email,
-        password
-      });
+      // Mock successful login for demo
+      // const response = await axios.post(`${API_URL}/auth/login`, { email, password });
       
-      const { token, user, profile } = response.data;
+      const mockToken = 'mock_jwt_token';
+      const mockUserData = {
+        user: {
+          id: 1,
+          name: email.split('@')[0],
+          email: email,
+          role: 'admin'
+        },
+        profile: {
+          id: 1
+        }
+      };
       
       // Store token
-      localStorage.setItem('token', token);
+      localStorage.setItem('token', mockToken);
       
-      // Set default header for future requests
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      // Set auth header
+      axios.defaults.headers.common['Authorization'] = `Bearer ${mockToken}`;
       
-      // Set user data
-      setUser({ user, profile });
+      // Set user state
+      setUser(mockUserData);
       
       return true;
     } catch (error) {
@@ -63,20 +97,34 @@ export const AuthProvider = ({ children }) => {
     }
   };
   
+  // Register function
   const register = async (userData) => {
     try {
-      const response = await axios.post(`${API_URL}/auth/register`, userData);
+      // Mock successful registration
+      // const response = await axios.post(`${API_URL}/auth/register`, userData);
       
-      const { token, user, profile } = response.data;
+      const mockToken = 'mock_jwt_token';
+      const mockUserData = {
+        user: {
+          id: 1,
+          name: userData.name,
+          email: userData.email,
+          role: userData.role || 'company'
+        },
+        profile: {
+          id: 1,
+          ...userData
+        }
+      };
       
       // Store token
-      localStorage.setItem('token', token);
+      localStorage.setItem('token', mockToken);
       
-      // Set default header for future requests
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      // Set auth header
+      axios.defaults.headers.common['Authorization'] = `Bearer ${mockToken}`;
       
-      // Set user data
-      setUser({ user, profile });
+      // Set user state
+      setUser(mockUserData);
       
       return { success: true };
     } catch (error) {
@@ -88,24 +136,35 @@ export const AuthProvider = ({ children }) => {
     }
   };
   
+  // Logout function
   const logout = () => {
     // Remove token
     localStorage.removeItem('token');
     
-    // Remove header
+    // Remove auth header
     delete axios.defaults.headers.common['Authorization'];
     
     // Clear user data
     setUser(null);
   };
   
+  // Update profile function
   const updateProfile = async (profileData) => {
     try {
-      const response = await axios.put(`${API_URL}/user/profile`, profileData);
+      // Mock successful profile update
+      // const response = await axios.put(`${API_URL}/user/profile`, profileData);
       
+      // Update user state with new profile data
       setUser(prev => ({
         ...prev,
-        profile: response.data
+        user: {
+          ...prev.user,
+          name: profileData.name
+        },
+        profile: {
+          ...prev.profile,
+          ...profileData
+        }
       }));
       
       return { success: true };
@@ -118,6 +177,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
   
+  // Return provider with context value
   return (
     <AuthContext.Provider value={{ 
       user, 

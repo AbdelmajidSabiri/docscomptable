@@ -15,7 +15,7 @@ import {
   InputAdornment,
   IconButton
 } from '@mui/material';
-import AuthContext from '../contexts/AuthContext';
+import AuthContext from '../../contexts/AuthContext';
 
 const validationSchema = Yup.object({
   name: Yup.string()

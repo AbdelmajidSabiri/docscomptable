@@ -1,7 +1,7 @@
 import { useNavigate, Link } from 'react-router-dom';
 import { Container, Box, Typography, Button, Paper } from '@mui/material';
 
-const NotFound = () => {
+const NotFoundPage = () => {
   const navigate = useNavigate();
 
   return (
@@ -12,7 +12,7 @@ const NotFound = () => {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          minHeight: '80vh',
+          minHeight: '70vh',
           textAlign: 'center',
         }}
       >
@@ -61,4 +61,4 @@ const NotFound = () => {
   );
 };
 
-export default NotFound;
+export default NotFoundPage;

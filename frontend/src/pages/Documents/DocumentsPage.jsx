@@ -1,5 +1,5 @@
-import { useState, useEffect, useContext } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { 
   Container,
   Paper,
@@ -16,19 +16,69 @@ import {
   TextField,
   MenuItem,
   Grid,
-  LinearProgress
+  LinearProgress,
+  FormControl,
+  InputLabel,
+  Select,
+  Divider
 } from '@mui/material';
-import { AuthContext } from '../../contexts/AuthContext';
-import useFetch from '../../hooks/useFetch';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+// Mock documents data
+const mockDocuments = [
+  {
+    id: 101,
+    company_id: 1,
+    document_type: 'Invoice',
+    operation_type: 'Income',
+    document_date: '2023-05-01',
+    upload_date: '2023-05-05',
+    status: 'processed',
+    vendor_client: 'Client XYZ'
+  },
+  {
+    id: 102,
+    company_id: 1,
+    document_type: 'Receipt',
+    operation_type: 'Expense',
+    document_date: '2023-04-15',
+    upload_date: '2023-04-20',
+    status: 'processed',
+    vendor_client: 'Office Supplies Co.'
+  },
+  {
+    id: 103,
+    company_id: 1,
+    document_type: 'Bank Statement',
+    operation_type: 'Administrative',
+    document_date: '2023-05-01',
+    upload_date: '2023-05-10',
+    status: 'new',
+    vendor_client: 'First National Bank'
+  },
+  {
+    id: 104,
+    company_id: 1,
+    document_type: 'Contract',
+    operation_type: 'Administrative',
+    document_date: '2023-04-10',
+    upload_date: '2023-04-12',
+    status: 'rejected',
+    vendor_client: 'Vendor ABC'
+  }
+];
+
+// Mock company data
+const mockCompany = {
+  id: 1,
+  name: 'Acme Corporation',
+  status: 'active'
+};
 
 const DocumentsPage = () => {
-  const { companyId } = useParams();
   const [searchParams] = useSearchParams();
-  const { user } = useContext(AuthContext);
-
-  // Filters
+  const [loading, setLoading] = useState(false);
+  
+  // Initialize filters with search params or defaults
   const [filters, setFilters] = useState({
     status: searchParams.get('status') || '',
     document_type: searchParams.get('document_type') || '',
@@ -36,56 +86,45 @@ const DocumentsPage = () => {
     date_from: searchParams.get('date_from') || '',
     date_to: searchParams.get('date_to') || ''
   });
-
-  // Data fetching
-  const {
-    data: company,
-    loading: companyLoading,
-    error: companyError
-  } = useFetch(`${API_URL}/companies/${companyId}`);
-
-  const {
-    data: documents,
-    loading: documentsLoading,
-    error: documentsError,
-    refetch: refetchDocuments
-  } = useFetch(`${API_URL}/documents/company/${companyId}`);
-
-  // Filtered documents
-  const [filteredDocs, setFilteredDocs] = useState([]);
-
-  useEffect(() => {
-    if (documents) {
-      let filtered = [...documents];
-
-      // Apply filters
-      if (filters.status) {
-        filtered = filtered.filter(doc => doc.status === filters.status);
-      }
-
-      if (filters.document_type) {
-        filtered = filtered.filter(doc => doc.document_type === filters.document_type);
-      }
-
-      if (filters.operation_type) {
-        filtered = filtered.filter(doc => doc.operation_type === filters.operation_type);
-      }
-
-      if (filters.date_from) {
-        const fromDate = new Date(filters.date_from);
-        filtered = filtered.filter(doc => new Date(doc.document_date) >= fromDate);
-      }
-
-      if (filters.date_to) {
-        const toDate = new Date(filters.date_to);
-        toDate.setHours(23, 59, 59, 999); // End of day
-        filtered = filtered.filter(doc => new Date(doc.document_date) <= toDate);
-      }
-
-      setFilteredDocs(filtered);
+  
+  // Apply filters to documents
+  const filteredDocs = mockDocuments.filter(doc => {
+    // Filter by status
+    if (filters.status && doc.status !== filters.status) {
+      return false;
     }
-  }, [documents, filters]);
-
+    
+    // Filter by document type
+    if (filters.document_type && doc.document_type !== filters.document_type) {
+      return false;
+    }
+    
+    // Filter by operation type
+    if (filters.operation_type && doc.operation_type !== filters.operation_type) {
+      return false;
+    }
+    
+    // Filter by date range
+    if (filters.date_from) {
+      const fromDate = new Date(filters.date_from);
+      const docDate = new Date(doc.document_date);
+      if (docDate < fromDate) {
+        return false;
+      }
+    }
+    
+    if (filters.date_to) {
+      const toDate = new Date(filters.date_to);
+      toDate.setHours(23, 59, 59, 999); // End of day
+      const docDate = new Date(doc.document_date);
+      if (docDate > toDate) {
+        return false;
+      }
+    }
+    
+    return true;
+  });
+  
   // Handle filter change
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -94,7 +133,7 @@ const DocumentsPage = () => {
       [name]: value
     }));
   };
-
+  
   // Reset filters
   const resetFilters = () => {
     setFilters({
@@ -105,49 +144,11 @@ const DocumentsPage = () => {
       date_to: ''
     });
   };
-
-  // Generate document type and operation type options from documents
-  const getUniqueValues = (field) => {
-    if (!documents) return [];
-    const values = [...new Set(documents.map(doc => doc[field]))];
-    return values.filter(Boolean); // Remove null/undefined
-  };
-
-  const documentTypes = getUniqueValues('document_type');
-  const operationTypes = getUniqueValues('operation_type');
-
-  if (companyLoading || documentsLoading) {
-    return <LinearProgress />;
-  }
-
-  if (companyError) {
-    return (
-      <Container maxWidth="lg" sx={{ mt: 4 }}>
-        <Typography color="error" variant="h6">
-          Error loading company: {companyError.message}
-        </Typography>
-      </Container>
-    );
-  }
-
-  if (documentsError) {
-    return (
-      <Container maxWidth="lg" sx={{ mt: 4 }}>
-        <Typography color="error" variant="h6">
-          Error loading documents: {documentsError.message}
-        </Typography>
-      </Container>
-    );
-  }
-
-  if (!company) {
-    return (
-      <Container maxWidth="lg" sx={{ mt: 4 }}>
-        <Typography variant="h6">Company not found</Typography>
-      </Container>
-    );
-  }
-
+  
+  // Get unique values for select filters
+  const documentTypes = [...new Set(mockDocuments.map(doc => doc.document_type))];
+  const operationTypes = [...new Set(mockDocuments.map(doc => doc.operation_type))];
+  
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       {/* Header */}
@@ -155,22 +156,20 @@ const DocumentsPage = () => {
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Box>
             <Typography variant="h4" component="h1" gutterBottom>
-              Documents for {company.name}
+              Documents for {mockCompany.name}
             </Typography>
             <Typography variant="body1" color="text.secondary">
               Manage and view all accounting documents for this company
             </Typography>
           </Box>
           
-          {(user.user.role === 'company' || user.user.role === 'accountant') && (
-            <Button
-              variant="contained"
-              component={Link}
-              to={`/documents/upload/${companyId}`}
-            >
-              Upload Document
-            </Button>
-          )}
+          <Button
+            variant="contained"
+            component={Link}
+            to={`/documents/upload/${mockCompany.id}`}
+          >
+            Upload Document
+          </Button>
         </Box>
       </Paper>
 
@@ -179,67 +178,68 @@ const DocumentsPage = () => {
         <Typography variant="h6" gutterBottom>
           Filters
         </Typography>
+        <Divider sx={{ mb: 2 }} />
         
         <Grid container spacing={2}>
           <Grid item xs={12} md={2}>
-            <TextField
-              select
-              fullWidth
-              label="Status"
-              name="status"
-              value={filters.status}
-              onChange={handleFilterChange}
-              margin="normal"
-              variant="outlined"
-              size="small"
-            >
-              <MenuItem value="">All</MenuItem>
-              <MenuItem value="new">Pending</MenuItem>
-              <MenuItem value="processed">Processed</MenuItem>
-              <MenuItem value="rejected">Rejected</MenuItem>
-            </TextField>
+            <FormControl fullWidth size="small">
+              <InputLabel id="status-filter-label">Status</InputLabel>
+              <Select
+                labelId="status-filter-label"
+                id="status-filter"
+                name="status"
+                value={filters.status}
+                onChange={handleFilterChange}
+                label="Status"
+              >
+                <MenuItem value="">All</MenuItem>
+                <MenuItem value="new">Pending</MenuItem>
+                <MenuItem value="processed">Processed</MenuItem>
+                <MenuItem value="rejected">Rejected</MenuItem>
+              </Select>
+            </FormControl>
           </Grid>
           
           <Grid item xs={12} md={2}>
-            <TextField
-              select
-              fullWidth
-              label="Document Type"
-              name="document_type"
-              value={filters.document_type}
-              onChange={handleFilterChange}
-              margin="normal"
-              variant="outlined"
-              size="small"
-            >
-              <MenuItem value="">All</MenuItem>
-              {documentTypes.map((type) => (
-                <MenuItem key={type} value={type}>
-                  {type}
-                </MenuItem>
-              ))}
-            </TextField>
+            <FormControl fullWidth size="small">
+              <InputLabel id="document-type-filter-label">Document Type</InputLabel>
+              <Select
+                labelId="document-type-filter-label"
+                id="document-type-filter"
+                name="document_type"
+                value={filters.document_type}
+                onChange={handleFilterChange}
+                label="Document Type"
+              >
+                <MenuItem value="">All</MenuItem>
+                {documentTypes.map((type) => (
+                  <MenuItem key={type} value={type}>
+                    {type}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Grid>
           
           <Grid item xs={12} md={2}>
-            <TextField
-              select
-              fullWidth
-              label="Operation Type"
-              name="operation_type"
-              value={filters.operation_type}
-              onChange={handleFilterChange}
-              margin="normal"
-              variant="outlined"
-              size="small"
-            >
-              <MenuItem value="">All</MenuItem>
-              {operationTypes.map((type) => (
-                <MenuItem key={type} value={type}>
-                  {type}
-                </MenuItem>
-              ))}
-            </TextField>
+            <FormControl fullWidth size="small">
+              <InputLabel id="operation-type-filter-label">Operation Type</InputLabel>
+              <Select
+                labelId="operation-type-filter-label"
+                id="operation-type-filter"
+                name="operation_type"
+                value={filters.operation_type}
+                onChange={handleFilterChange}
+                label="Operation Type"
+              >
+                <MenuItem value="">All</MenuItem>
+                {operationTypes.map((type) => (
+                  <MenuItem key={type} value={type}>
+                    {type}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Grid>
           
           <Grid item xs={12} md={2}>
@@ -250,12 +250,10 @@ const DocumentsPage = () => {
               type="date"
               value={filters.date_from}
               onChange={handleFilterChange}
-              margin="normal"
-              variant="outlined"
-              size="small"
               InputLabelProps={{
                 shrink: true,
               }}
+              size="small"
             />
           </Grid>
           
@@ -267,12 +265,10 @@ const DocumentsPage = () => {
               type="date"
               value={filters.date_to}
               onChange={handleFilterChange}
-              margin="normal"
-              variant="outlined"
-              size="small"
               InputLabelProps={{
                 shrink: true,
               }}
+              size="small"
             />
           </Grid>
           
@@ -280,7 +276,7 @@ const DocumentsPage = () => {
             <Button 
               variant="outlined" 
               onClick={resetFilters}
-              sx={{ mt: 2 }}
+              fullWidth
             >
               Reset Filters
             </Button>
@@ -293,8 +289,11 @@ const DocumentsPage = () => {
         <Typography variant="h6" gutterBottom>
           Documents ({filteredDocs.length})
         </Typography>
+        <Divider sx={{ mb: 2 }} />
         
-        {filteredDocs.length > 0 ? (
+        {loading ? (
+          <LinearProgress />
+        ) : filteredDocs.length > 0 ? (
           <TableContainer>
             <Table>
               <TableHead>
@@ -337,8 +336,7 @@ const DocumentsPage = () => {
                         View
                       </Button>
                       
-                      {(user.user.role === 'accountant' || user.user.role === 'admin') && 
-                       doc.status === 'new' && (
+                      {doc.status === 'new' && (
                         <Button
                           component={Link}
                           to={`/documents/process/${doc.id}`}
@@ -360,16 +358,14 @@ const DocumentsPage = () => {
             <Typography variant="body1" color="text.secondary">
               No documents found matching the filters.
             </Typography>
-            {documents?.length === 0 && user.user.role === 'company' && (
-              <Button
-                variant="contained"
-                component={Link}
-                to={`/documents/upload/${companyId}`}
-                sx={{ mt: 2 }}
-              >
-                Upload Your First Document
-              </Button>
-            )}
+            <Button
+              variant="contained"
+              component={Link}
+              to={`/documents/upload/${mockCompany.id}`}
+              sx={{ mt: 2 }}
+            >
+              Upload Your First Document
+            </Button>
           </Box>
         )}
       </Paper>
