@@ -1,106 +1,97 @@
-// src/contexts/AuthContext.jsx
-import { createContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
-export const AuthContext = createContext();
-
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  useEffect(() => {
+// Add a request interceptor to include the auth token in all requests
+axios.interceptors.request.use(
+  (config) => {
     const token = localStorage.getItem('token');
     if (token) {
-      loadUser(token);
-    } else {
-      setLoading(false);
+      config.headers.Authorization = `Bearer ${token}`;
     }
-  }, []);
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
-  const loadUser = async (token) => {
-    try {
-      // Set default auth header
-      setAuthToken(token);
-      
-      // Get user data
-      const res = await axios.get(`${API_URL}/auth/me`);
-      
-      setUser(res.data);
-      setIsAuthenticated(true);
-      setLoading(false);
-    } catch (err) {
+// Add a response interceptor to handle auth errors
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // If 401 Unauthorized, clear token and redirect to login
+    if (error.response && error.response.status === 401) {
       localStorage.removeItem('token');
-      setIsAuthenticated(false);
-      setUser(null);
-      setLoading(false);
+      window.location.href = '/login';
     }
-  };
+    return Promise.reject(error);
+  }
+);
 
-  const login = async (email, password) => {
-    try {
-      const res = await axios.post(`${API_URL}/auth/login`, { email, password });
-      
-      if (res.data.token) {
-        localStorage.setItem('token', res.data.token);
-        await loadUser(res.data.token);
-        return true;
+// Auth API
+export const auth = {
+  login: (email, password) => axios.post(`${API_URL}/auth/login`, { email, password }),
+  register: (userData) => axios.post(`${API_URL}/auth/register`, userData),
+  getUserProfile: () => axios.get(`${API_URL}/user/profile`),
+  updateProfile: (profileData) => axios.put(`${API_URL}/user/profile`, profileData),
+  changePassword: (data) => axios.post(`${API_URL}/auth/change-password`, data)
+};
+
+// Companies API
+export const companies = {
+  getAll: (params) => axios.get(`${API_URL}/companies`, { params }),
+  getById: (id) => axios.get(`${API_URL}/companies/${id}`),
+  create: (data) => axios.post(`${API_URL}/companies`, data),
+  update: (id, data) => axios.put(`${API_URL}/companies/${id}`, data),
+  delete: (id) => axios.delete(`${API_URL}/companies/${id}`),
+  getDocuments: (companyId) => axios.get(`${API_URL}/documents/company/${companyId}`)
+};
+
+// Documents API
+export const documents = {
+  getAll: (params) => axios.get(`${API_URL}/documents`, { params }),
+  getById: (id) => axios.get(`${API_URL}/documents/${id}`),
+  getByCompany: (companyId) => axios.get(`${API_URL}/documents/company/${companyId}`),
+  upload: (data, onUploadProgress) => {
+    const formData = new FormData();
+    
+    // Add file(s)
+    if (Array.isArray(data.files)) {
+      data.files.forEach(file => {
+        formData.append('files', file);
+      });
+    } else if (data.files) {
+      formData.append('files', data.files);
+    }
+    
+    // Add other data
+    for (const key in data) {
+      if (key !== 'files') {
+        formData.append(key, data[key]);
       }
-      return false;
-    } catch (err) {
-      console.error('Login error:', err);
-      return false;
     }
-  };
+    
+    return axios.post(`${API_URL}/documents/upload`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      onUploadProgress
+    });
+  },
+  updateStatus: (id, status) => axios.patch(`${API_URL}/documents/${id}/status`, { status }),
+  delete: (id) => axios.delete(`${API_URL}/documents/${id}`)
+};
 
-  const register = async (userData) => {
-    try {
-      const res = await axios.post(`${API_URL}/auth/register`, userData);
-      
-      if (res.data.token) {
-        localStorage.setItem('token', res.data.token);
-        await loadUser(res.data.token);
-        return true;
-      }
-      return false;
-    } catch (err) {
-      console.error('Registration error:', err);
-      return false;
-    }
-  };
+// Notifications API
+export const notifications = {
+  getAll: () => axios.get(`${API_URL}/notifications`),
+  markAsRead: (id) => axios.patch(`${API_URL}/notifications/${id}/read`),
+  markAllAsRead: () => axios.patch(`${API_URL}/notifications/read-all`),
+  delete: (id) => axios.delete(`${API_URL}/notifications/${id}`)
+};
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    setUser(null);
-    setIsAuthenticated(false);
-    // Remove auth header
-    delete axios.defaults.headers.common['x-auth-token'];
-  };
-
-  // Set auth token for all requests
-  const setAuthToken = (token) => {
-    if (token) {
-      axios.defaults.headers.common['x-auth-token'] = token;
-    } else {
-      delete axios.defaults.headers.common['x-auth-token'];
-    }
-  };
-
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        loading,
-        isAuthenticated,
-        login,
-        register,
-        logout,
-        loadUser
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
+export default {
+  auth,
+  companies,
+  documents,
+  notifications
 };

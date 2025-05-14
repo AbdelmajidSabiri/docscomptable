@@ -8,98 +8,128 @@ export const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
+  
   useEffect(() => {
+    // Check if user is already logged in (token in localStorage)
     const token = localStorage.getItem('token');
     if (token) {
-      loadUser(token);
+      fetchUserProfile(token);
     } else {
       setLoading(false);
     }
   }, []);
-
-  const loadUser = async (token) => {
+  
+  const fetchUserProfile = async (token) => {
     try {
-      // Set default auth header
-      setAuthToken(token);
+      // Set default header for all requests
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       
-      // Get user data
-      const res = await axios.get(`${API_URL}/auth/me`);
+      // Get user profile
+      const response = await axios.get(`${API_URL}/user/profile`);
       
-      setUser(res.data);
-      setIsAuthenticated(true);
+      setUser({
+        user: response.data.user,
+        profile: response.data.profile,
+      });
       setLoading(false);
-    } catch (err) {
-      localStorage.removeItem('token');
-      setIsAuthenticated(false);
-      setUser(null);
-      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      logout(); // Token might be invalid or expired
     }
   };
-
+  
   const login = async (email, password) => {
     try {
-      const res = await axios.post(`${API_URL}/auth/login`, { email, password });
+      const response = await axios.post(`${API_URL}/auth/login`, {
+        email,
+        password
+      });
       
-      if (res.data.token) {
-        localStorage.setItem('token', res.data.token);
-        await loadUser(res.data.token);
-        return true;
-      }
-      return false;
-    } catch (err) {
-      console.error('Login error:', err);
+      const { token, user, profile } = response.data;
+      
+      // Store token
+      localStorage.setItem('token', token);
+      
+      // Set default header for future requests
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      
+      // Set user data
+      setUser({ user, profile });
+      
+      return true;
+    } catch (error) {
+      console.error('Login error:', error);
       return false;
     }
   };
-
+  
   const register = async (userData) => {
     try {
-      const res = await axios.post(`${API_URL}/auth/register`, userData);
+      const response = await axios.post(`${API_URL}/auth/register`, userData);
       
-      if (res.data.token) {
-        localStorage.setItem('token', res.data.token);
-        await loadUser(res.data.token);
-        return true;
-      }
-      return false;
-    } catch (err) {
-      console.error('Registration error:', err);
-      return false;
+      const { token, user, profile } = response.data;
+      
+      // Store token
+      localStorage.setItem('token', token);
+      
+      // Set default header for future requests
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      
+      // Set user data
+      setUser({ user, profile });
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Registration error:', error);
+      return { 
+        success: false, 
+        message: error.response?.data?.message || 'Registration failed'
+      };
     }
   };
-
+  
   const logout = () => {
+    // Remove token
     localStorage.removeItem('token');
+    
+    // Remove header
+    delete axios.defaults.headers.common['Authorization'];
+    
+    // Clear user data
     setUser(null);
-    setIsAuthenticated(false);
-    // Remove auth header
-    delete axios.defaults.headers.common['x-auth-token'];
   };
-
-  // Set auth token for all requests
-  const setAuthToken = (token) => {
-    if (token) {
-      axios.defaults.headers.common['x-auth-token'] = token;
-    } else {
-      delete axios.defaults.headers.common['x-auth-token'];
+  
+  const updateProfile = async (profileData) => {
+    try {
+      const response = await axios.put(`${API_URL}/user/profile`, profileData);
+      
+      setUser(prev => ({
+        ...prev,
+        profile: response.data
+      }));
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Profile update error:', error);
+      return { 
+        success: false, 
+        message: error.response?.data?.message || 'Profile update failed'
+      };
     }
   };
-
+  
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        loading,
-        isAuthenticated,
-        login,
-        register,
-        logout,
-        loadUser
-      }}
-    >
+    <AuthContext.Provider value={{ 
+      user, 
+      loading, 
+      login, 
+      register, 
+      logout,
+      updateProfile
+    }}>
       {children}
     </AuthContext.Provider>
   );
 };
+
+export default AuthContext;
