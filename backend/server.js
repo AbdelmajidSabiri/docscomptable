@@ -17,12 +17,12 @@ app.get('/', (req, res) => {
 });
 
 // Routes
-app.use('/api/auth', require('./routes/auth.routes'));
-app.use('/api/users', require('./routes/users.routes'));
-app.use('/api/accountants', require('./routes/accountants.routes'));
-app.use('/api/companies', require('./routes/companies.routes'));
-app.use('/api/documents', require('./routes/documents.routes'));
-app.use('/api/notifications', require('./routes/notifications.routes'));
+app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/users', require('./routes/usersRoutes'));
+app.use('/api/accountants', require('./routes/accountantsRoutes'));
+app.use('/api/companies', require('./routes/companiesRoutes'));
+app.use('/api/documents', require('./routes/documentsRoutes'));
+app.use('/api/notifications', require('./routes/notificationsRoutes'));
 
 
 // Start server
