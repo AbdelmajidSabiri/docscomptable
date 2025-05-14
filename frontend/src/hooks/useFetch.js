@@ -14,6 +14,11 @@ const useFetch = (url, options = {}) => {
     const source = axios.CancelToken.source();
 
     const fetchData = async () => {
+      if (!url) {
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       
       try {

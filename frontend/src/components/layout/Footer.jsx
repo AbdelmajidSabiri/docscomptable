@@ -1,13 +1,13 @@
 const Footer = () => {
-    const year = new Date().getFullYear();
-    
-    return (
-      <footer className="app-footer">
-        <div className="footer-content">
-          <p>&copy; {year} DocsCompta. All rights reserved.</p>
-        </div>
-      </footer>
-    );
-  };
+  const year = new Date().getFullYear();
   
-  export default Footer;
+  return (
+    <footer className="app-footer">
+      <div className="footer-content">
+        <p>&copy; {year} DocsCompta. All rights reserved.</p>
+      </div>
+    </footer>
+  );
+};
+
+export default Footer;

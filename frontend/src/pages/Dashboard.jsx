@@ -103,7 +103,7 @@ const Dashboard = () => {
             <Typography variant="body1" color="text.secondary">
               {user.user.role === 'admin' && 'Manage your entire accounting system from here.'}
               {user.user.role === 'accountant' && 'Track your client companies and their documents.'}
-              {user.user.role === 'company' && `Welcome to your ${user.profile.companyName} dashboard.`}
+              {user.user.role === 'company' && `Welcome to your ${user.profile?.companyName || 'company'} dashboard.`}
             </Typography>
           </Paper>
         </Grid>
@@ -591,7 +591,7 @@ const Dashboard = () => {
                             Company Name
                           </Typography>
                           <Typography variant="body1">
-                            {user.profile.companyName}
+                            {user.profile?.companyName || '-'}
                           </Typography>
                         </Grid>
                         <Grid item xs={12} sm={6}>
@@ -599,7 +599,7 @@ const Dashboard = () => {
                             Tax ID
                           </Typography>
                           <Typography variant="body1">
-                            {user.profile.taxId}
+                            {user.profile?.taxId || '-'}
                           </Typography>
                         </Grid>
                       </>

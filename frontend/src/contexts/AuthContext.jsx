@@ -125,7 +125,8 @@ export const AuthProvider = ({ children }) => {
       login, 
       register, 
       logout,
-      updateProfile
+      updateProfile,
+      isAuthenticated: !!user
     }}>
       {children}
     </AuthContext.Provider>
