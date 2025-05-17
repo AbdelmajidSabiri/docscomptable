@@ -1,309 +1,124 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { 
-  Card,
-  CardContent,
-  Box,
-  Typography,
-  Button,
-  IconButton,
-  Chip,
-  Tooltip,
-  alpha
-} from '@mui/material';
+import { useNavigate } from 'react-router-dom';
+import PropTypes from 'prop-types';
+import './DocumentCard.css';
 
-/**
- * A modern document card component that transforms on hover from white to black
- * with additional information and actions revealed.
- * 
- * @param {Object} document - The document object containing details
- * @param {string} document.id - Document ID
- * @param {string} document.title - Document title
- * @param {string} document.type - Document type (Invoice, Receipt, etc.)
- * @param {string} document.company - Company name
- * @param {string} document.date - Document date
- * @param {string} document.status - Document status (pending, processed, rejected)
- * @param {string} document.preview - Document preview image URL
- * @param {Function} onProcess - Optional callback for processing the document
- * @param {Function} onDownload - Optional callback for downloading the document
- */
-const DocumentCard = ({ document, onProcess, onDownload }) => {
-  const [elevation, setElevation] = useState(1);
+const DocumentCard = ({ document }) => {
+  const [isHovered, setIsHovered] = useState(false);
+  const navigate = useNavigate();
+
+  // Get status class
+  const getStatusClass = (status) => {
+    switch (status) {
+      case 'processed':
+        return 'status-processed';
+      case 'pending':
+        return 'status-pending';
+      case 'rejected':
+        return 'status-rejected';
+      default:
+        return '';
+    }
+  };
 
   const handleProcessClick = (e) => {
-    e.preventDefault();
     e.stopPropagation();
-    if (onProcess) {
-      onProcess(document.id);
-    } else {
-      window.location.href = `/documents/process/${document.id}`;
-    }
+    navigate(`/documents/process/${document.id}`);
   };
 
   const handleDownloadClick = (e) => {
-    e.preventDefault();
     e.stopPropagation();
-    if (onDownload) {
-      onDownload(document.id);
-    }
+    // Implementation would go here
+    console.log(`Downloading document ${document.id}`);
   };
 
-  // Get status color
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'processed':
-        return 'success';
-      case 'pending':
-        return 'warning';
-      case 'rejected':
-        return 'error';
-      default:
-        return 'default';
-    }
+  const handleCardClick = () => {
+    navigate(`/documents/view/${document.id}`);
   };
 
   return (
-    <Card 
-      sx={{ 
-        height: '100%', 
-        display: 'flex',
-        flexDirection: 'column',
-        transition: 'all 0.3s ease',
-        cursor: 'pointer',
-        position: 'relative',
-        overflow: 'hidden',
-        backgroundColor: 'background.paper',
-        '&:hover': {
-          transform: 'translateY(-5px)',
-          boxShadow: (theme) => theme.shadows[10],
-          backgroundColor: 'black',
-          color: 'white',
-          '& .document-overlay': {
-            opacity: 1
-          },
-          '& .document-actions': {
-            opacity: 1,
-            transform: 'translateY(0)'
-          },
-          '& .document-info': {
-            opacity: 0
-          },
-          '& .document-hover-info': {
-            opacity: 1,
-            transform: 'translateY(0)'
-          }
-        }
-      }}
-      component={Link}
-      to={`/documents/view/${document.id}`}
-      onMouseOver={() => setElevation(3)}
-      onMouseOut={() => setElevation(1)}
-      elevation={elevation}
+    <div 
+      className="document-card"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onClick={handleCardClick}
     >
-      {/* Document Preview Background */}
-      <Box
-        sx={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundImage: `url(${document.preview || '/api/placeholder/400/300'})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          opacity: 0.1,
-          transition: 'opacity 0.3s ease',
-          '&:hover': {
-            opacity: 0.2
-          }
-        }}
-      />
-
-      {/* Overlay for hover state */}
-      <Box 
-        className="document-overlay"
-        sx={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
-          opacity: 0,
-          transition: 'opacity 0.3s ease'
-        }}
-      />
-
-      {/* Status Indicator - Always visible */}
-      <Box
-        sx={{
-          position: 'absolute',
-          top: 12,
-          right: 12,
-          zIndex: 2
-        }}
-      >
-        <Chip
-          label={document.status}
-          size="small"
-          color={getStatusColor(document.status)}
-          sx={{ 
-            fontWeight: 'bold',
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px',
-            fontSize: '0.65rem',
-          }}
-        />
-      </Box>
-
-      {/* Normal Info - Visible by default */}
-      <CardContent
-        className="document-info"
-        sx={{
-          position: 'relative',
-          zIndex: 1,
-          transition: 'opacity 0.3s ease',
-          flexGrow: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between'
-        }}
-      >
-        <Box>
-          <Typography variant="subtitle1" component="h2" fontWeight="bold" noWrap>
-            {document.title}
-          </Typography>
-          <Typography variant="body2" color="text.secondary" gutterBottom>
-            {document.type}
-          </Typography>
-        </Box>
+      {/* Background image */}
+      <div 
+        className="document-bg" 
+        style={{ backgroundImage: `url(${document.preview})` }}
+      ></div>
+      
+      {/* Overlay */}
+      <div className="document-overlay"></div>
+      
+      {/* Status indicator */}
+      <div className={`document-status ${getStatusClass(document.status)}`}>
+        {document.status}
+      </div>
+      
+      {/* Normal content - visible by default */}
+      <div className="document-content">
+        <div>
+          <div className="document-title">{document.title}</div>
+          <div className="document-type">{document.type}</div>
+        </div>
         
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            mt: 2
-          }}
-        >
-          <Typography variant="caption" color="text.secondary">
-            {new Date(document.date).toLocaleDateString()}
-          </Typography>
-          <Typography variant="caption" fontWeight="medium" noWrap>
-            {document.company}
-          </Typography>
-        </Box>
-      </CardContent>
-
-      {/* Hover Info - Visible on hover */}
-      <Box
-        className="document-hover-info"
-        sx={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          zIndex: 2,
-          p: 2,
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          opacity: 0,
-          transform: 'translateY(10px)',
-          transition: 'opacity 0.3s ease, transform 0.3s ease',
-          color: 'white'
-        }}
-      >
-        <Typography variant="h6" fontWeight="bold" gutterBottom>
-          {document.title}
-        </Typography>
+        <div className="document-meta">
+          <div className="document-date">{new Date(document.date).toLocaleDateString()}</div>
+          <div className="document-company">{document.company}</div>
+        </div>
+      </div>
+      
+      {/* Hover content - visible on hover */}
+      <div className="document-hover-info">
+        <div className="hover-title">{document.title}</div>
         
-        <Box sx={{ my: 1 }}>
-          <Typography variant="body2" align="center">
-            Type: {document.type}
-          </Typography>
-          <Typography variant="body2" align="center">
-            Company: {document.company}
-          </Typography>
-          <Typography variant="body2" align="center">
-            Date: {new Date(document.date).toLocaleDateString()}
-          </Typography>
-        </Box>
+        <div className="hover-details">
+          <div className="hover-detail">Type: {document.type}</div>
+          <div className="hover-detail">Company: {document.company}</div>
+          <div className="hover-detail">Date: {new Date(document.date).toLocaleDateString()}</div>
+        </div>
         
-        <Button
-          variant="outlined"
-          color="inherit"
-          size="small"
-          sx={{ 
-            mt: 2,
-            borderColor: 'white',
-            '&:hover': {
-              backgroundColor: 'rgba(255,255,255,0.1)',
-              borderColor: 'white'
-            }
-          }}
-        >
+        <button className="hover-button">
           View Document
-        </Button>
-      </Box>
-
-      {/* Action buttons - Visible on hover */}
-      <Box
-        className="document-actions"
-        sx={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          zIndex: 3,
-          display: 'flex',
-          justifyContent: 'flex-end',
-          padding: 1,
-          opacity: 0,
-          transform: 'translateY(10px)',
-          transition: 'opacity 0.3s ease, transform 0.3s ease'
-        }}
-      >
-        {/* Only show process button if status is pending */}
+        </button>
+      </div>
+      
+      {/* Action buttons - visible on hover */}
+      <div className="document-actions">
         {document.status === 'pending' && (
-          <Tooltip title="Process">
-            <IconButton
-              size="small"
-              sx={{ 
-                color: 'white',
-                backgroundColor: 'rgba(255,255,255,0.1)',
-                marginRight: 1,
-                '&:hover': {
-                  backgroundColor: 'rgba(255,255,255,0.2)'
-                }
-              }}
-              onClick={handleProcessClick}
-            >
-              ✓
-            </IconButton>
-          </Tooltip>
+          <button
+            className="action-button"
+            onClick={handleProcessClick}
+            title="Process"
+          >
+            ✓
+          </button>
         )}
         
-        <Tooltip title="Download">
-          <IconButton
-            size="small"
-            sx={{ 
-              color: 'white',
-              backgroundColor: 'rgba(255,255,255,0.1)',
-              '&:hover': {
-                backgroundColor: 'rgba(255,255,255,0.2)'
-              }
-            }}
-            onClick={handleDownloadClick}
-          >
-            ⬇️
-          </IconButton>
-        </Tooltip>
-      </Box>
-    </Card>
+        <button
+          className="action-button"
+          onClick={handleDownloadClick}
+          title="Download"
+        >
+          ⬇️
+        </button>
+      </div>
+    </div>
   );
+};
+
+DocumentCard.propTypes = {
+  document: PropTypes.shape({
+    id: PropTypes.number.isRequired,
+    title: PropTypes.string.isRequired,
+    type: PropTypes.string.isRequired,
+    company: PropTypes.string.isRequired,
+    date: PropTypes.string.isRequired,
+    status: PropTypes.string.isRequired,
+    preview: PropTypes.string
+  }).isRequired
 };
 
 export default DocumentCard;

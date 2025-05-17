@@ -1,0 +1,94 @@
+/* Stat Card Styles */
+.stat-card {
+  height: 100%;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border-radius: 8px;
+  background-color: white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+}
+
+.stat-card.hovered {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.06);
+}
+
+.stat-content {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.stat-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  font-size: 24px;
+}
+
+.icon-primary {
+  background-color: rgba(25, 118, 210, 0.1);
+  color: #1976d2;
+}
+
+.icon-secondary {
+  background-color: rgba(156, 39, 176, 0.1);
+  color: #9c27b0;
+}
+
+.icon-success {
+  background-color: rgba(46, 125, 50, 0.1);
+  color: #2e7d32;
+}
+
+.icon-warning {
+  background-color: rgba(237, 108, 2, 0.1);
+  color: #ed6c02;
+}
+
+.icon-info {
+  background-color: rgba(2, 136, 209, 0.1);
+  color: #0288d1;
+}
+
+.icon-error {
+  background-color: rgba(211, 47, 47, 0.1);
+  color: #d32f2f;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+
+.stat-title {
+  font-size: 14px;
+  color: #666;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .stat-value {
+    font-size: 24px;
+  }
+  
+  .stat-icon {
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .stat-content {
+    padding: 12px;
+  }
+}
