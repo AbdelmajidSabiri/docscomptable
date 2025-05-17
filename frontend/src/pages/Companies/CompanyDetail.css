@@ -1,0 +1,249 @@
+/* Company detail page specific styles */
+.company-header {
+  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+  color: white;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.company-header-pattern {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 40%;
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.1) 100%);
+  transform: skewX(-15deg) translateX(10%);
+}
+
+.company-title {
+  font-weight: 700;
+  margin-bottom: 8px;
+  position: relative;
+  z-index: 1;
+}
+
+.company-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  position: relative;
+  z-index: 1;
+}
+
+.company-address {
+  opacity: 0.8;
+  position: relative;
+  z-index: 1;
+}
+
+.status-chip {
+  font-weight: 600;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-radius: 4px;
+  padding: 2px 8px;
+}
+
+.status-chip.active {
+  background-color: rgba(84, 214, 44, 0.24);
+  color: #229A16;
+}
+
+.status-chip.pending {
+  background-color: rgba(255, 193, 7, 0.24);
+  color: #B78103;
+}
+
+.status-chip.inactive {
+  background-color: rgba(255, 72, 66, 0.24);
+  color: #B72136;
+}
+
+.company-section {
+  border-radius: 12px;
+  background-color: white;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.section-title {
+  font-weight: 700;
+  font-size: 1.25rem;
+  margin-bottom: 16px;
+}
+
+.section-divider {
+  margin: 16px 0 24px;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 24px;
+}
+
+.info-item {
+  margin-bottom: 16px;
+}
+
+.info-label {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.info-value {
+  font-size: 0.875rem;
+}
+
+.accountant-box {
+  display: flex;
+  align-items: center;
+  background-color: #f8fafc;
+  padding: 16px;
+  border-radius: 8px;
+  margin-top: 24px;
+}
+
+.accountant-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 16px;
+  color: #6366f1;
+  background-color: rgba(99, 102, 241, 0.1);
+}
+
+.accountant-info {
+  flex: 1;
+}
+
+.accountant-label {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-bottom: 2px;
+}
+
+.accountant-name {
+  font-weight: 500;
+}
+
+.action-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.quick-action {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.quick-action.primary {
+  background-color: #1976d2;
+  color: white;
+}
+
+.quick-action.secondary {
+  background-color: white;
+  color: #1976d2;
+  border: 1px solid #1976d2;
+}
+
+.quick-action:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.quick-action-icon {
+  margin-right: 12px;
+  font-size: 20px;
+}
+
+.activity-list {
+  margin-top: 16px;
+}
+
+.activity-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 12px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.activity-item:last-child {
+  border-bottom: none;
+}
+
+.activity-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.activity-content {
+  flex: 1;
+}
+
+.activity-type {
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.activity-desc {
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+.activity-date {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-left: 12px;
+  white-space: nowrap;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .company-header {
+    padding: 20px;
+  }
+
+  .company-header-pattern {
+    display: none;
+  }
+  
+  .info-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .accountant-box {
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: center;
+  }
+  
+  .accountant-icon {
+    margin: 0 auto 12px;
+  }
+}
