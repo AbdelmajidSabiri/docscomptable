@@ -15,19 +15,38 @@ export const AuthContext = createContext({
 // API URL from environment variables or default to localhost
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
+// Mock user data for development
+const MOCK_USER = {
+  user: {
+    id: 1,
+    name: 'Demo User',
+    email: 'demo@example.com',
+    role: 'admin'
+  },
+  profile: {
+    id: 1,
+    phone: '123-456-7890',
+    address: '123 Main St'
+  }
+};
+
 // Auth Provider Component
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // Initialize with mock user for development
+  const [user, setUser] = useState(MOCK_USER);
+  const [loading, setLoading] = useState(false);
   
   // Check for existing auth on component mount
   useEffect(() => {
+    console.log('AuthProvider initialized with mock user');
+    /*
     const token = localStorage.getItem('token');
     if (token) {
       fetchUserProfile(token);
     } else {
       setLoading(false);
     }
+    */
   }, []);
   
   // Fetch user profile with token
@@ -39,22 +58,7 @@ export const AuthProvider = ({ children }) => {
       // Mock response for demo (replace with actual API call in production)
       // const response = await axios.get(`${API_URL}/user/profile`);
       
-      // Mock user data for development
-      const mockUserData = {
-        user: {
-          id: 1,
-          name: 'Demo User',
-          email: 'demo@example.com',
-          role: 'admin'
-        },
-        profile: {
-          id: 1,
-          phone: '123-456-7890',
-          address: '123 Main St'
-        }
-      };
-      
-      setUser(mockUserData);
+      setUser(MOCK_USER);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching user profile:', error);

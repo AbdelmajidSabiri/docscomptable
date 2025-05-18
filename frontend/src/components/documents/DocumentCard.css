@@ -1,4 +1,4 @@
-/* Document Card Styles */
+/* DocumentCard.css */
 .document-card {
   height: 100%;
   display: flex;
@@ -167,34 +167,39 @@
 }
 
 .hover-details {
-  margin: 8px 0;
+  margin: 12px 0;
   text-align: center;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .hover-detail {
   font-size: 14px;
-  margin-bottom: 4px;
+  line-height: 1.4;
 }
 
 .hover-button {
   margin-top: 16px;
-  padding: 6px 16px;
+  padding: 8px 16px;
   border: 1px solid white;
   border-radius: 4px;
   background-color: transparent;
   color: white;
   cursor: pointer;
   transition: background-color 0.3s ease;
+  font-weight: 500;
 }
 
 .hover-button:hover {
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: rgba(255, 255, 255, 0.2);
 }
 
 .document-actions {
   position: absolute;
-  bottom: 8px;
-  right: 8px;
+  bottom: 12px;
+  right: 12px;
   z-index: 3;
   display: flex;
   justify-content: flex-end;
@@ -209,8 +214,8 @@
 }
 
 .action-button {
-  width: 30px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background-color: rgba(255, 255, 255, 0.1);
   color: white;
@@ -220,8 +225,9 @@
   margin-left: 8px;
   cursor: pointer;
   border: none;
+  font-size: 16px;
 }
 
 .action-button:hover {
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(255, 255, 255, 0.3);
 }

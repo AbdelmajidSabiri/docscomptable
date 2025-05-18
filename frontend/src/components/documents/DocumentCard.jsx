@@ -1,3 +1,4 @@
+// DocumentCard.jsx
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
@@ -7,20 +8,7 @@ const DocumentCard = ({ document }) => {
   const [isHovered, setIsHovered] = useState(false);
   const navigate = useNavigate();
 
-  // Get status class
-  const getStatusClass = (status) => {
-    switch (status) {
-      case 'processed':
-        return 'status-processed';
-      case 'pending':
-        return 'status-pending';
-      case 'rejected':
-        return 'status-rejected';
-      default:
-        return '';
-    }
-  };
-
+  // Handle various click events
   const handleProcessClick = (e) => {
     e.stopPropagation();
     navigate(`/documents/process/${document.id}`);
@@ -46,14 +34,14 @@ const DocumentCard = ({ document }) => {
       {/* Background image */}
       <div 
         className="document-bg" 
-        style={{ backgroundImage: `url(${document.preview})` }}
+        style={{ backgroundImage: `url(${document.preview || '/api/placeholder/400/300'})` }}
       ></div>
       
-      {/* Overlay */}
+      {/* Overlay - appears on hover */}
       <div className="document-overlay"></div>
       
       {/* Status indicator */}
-      <div className={`document-status ${getStatusClass(document.status)}`}>
+      <div className={`document-status status-${document.status}`}>
         {document.status}
       </div>
       
@@ -78,6 +66,20 @@ const DocumentCard = ({ document }) => {
           <div className="hover-detail">Type: {document.type}</div>
           <div className="hover-detail">Company: {document.company}</div>
           <div className="hover-detail">Date: {new Date(document.date).toLocaleDateString()}</div>
+          
+          {/* Additional details shown on hover */}
+          {document.vendor_client && (
+            <div className="hover-detail">Vendor/Client: {document.vendor_client}</div>
+          )}
+          {document.reference && (
+            <div className="hover-detail">Reference: {document.reference}</div>
+          )}
+          {document.amount && (
+            <div className="hover-detail">Amount: €{document.amount}</div>
+          )}
+          {document.operation_type && (
+            <div className="hover-detail">Operation: {document.operation_type}</div>
+          )}
         </div>
         
         <button className="hover-button">
@@ -117,7 +119,12 @@ DocumentCard.propTypes = {
     company: PropTypes.string.isRequired,
     date: PropTypes.string.isRequired,
     status: PropTypes.string.isRequired,
-    preview: PropTypes.string
+    preview: PropTypes.string,
+    // Additional optional properties
+    vendor_client: PropTypes.string,
+    reference: PropTypes.string,
+    amount: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    operation_type: PropTypes.string
   }).isRequired
 };
 

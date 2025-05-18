@@ -1,821 +1,359 @@
 import { useState, useContext, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../contexts/AuthContext';
+import '../../styles/pages/Dashboard.css';
 
-// Mock data for stats
-const mockStats = {
-  companies: 24,
-  accountants: 8, 
-  documents: 356,
-  pendingReviews: 5
-};
-
-// Mock document data
-const mockDocuments = [
-  { 
-    id: 101, 
-    title: 'Invoice #2023-056', 
-    type: 'Invoice', 
-    company: 'Acme Corp', 
-    date: '2025-05-15', 
-    status: 'pending',
-    preview: '/api/placeholder/400/300'
-  },
-  { 
-    id: 102, 
-    title: 'Receipt #R789', 
-    type: 'Receipt', 
-    company: 'TechStart Inc', 
-    date: '2025-05-12', 
-    status: 'processed',
-    preview: '/api/placeholder/400/300'
-  },
-  { 
-    id: 103, 
-    title: 'Contract #C2023-12', 
-    type: 'Contract', 
-    company: 'Global Enterprises', 
-    date: '2025-05-10', 
-    status: 'processed',
-    preview: '/api/placeholder/400/300'
-  },
-  { 
-    id: 104, 
-    title: 'Bank Statement May 2025', 
-    type: 'Statement', 
-    company: 'Startup Ventures', 
-    date: '2025-05-05', 
-    status: 'pending',
-    preview: '/api/placeholder/400/300'
-  },
-  { 
-    id: 105, 
-    title: 'Invoice #2023-057', 
-    type: 'Invoice', 
-    company: 'Acme Corp', 
-    date: '2025-05-03', 
-    status: 'rejected',
-    preview: '/api/placeholder/400/300'
-  },
-  { 
-    id: 106, 
-    title: 'Receipt #R790', 
-    type: 'Receipt', 
-    company: 'TechStart Inc', 
-    date: '2025-05-01', 
-    status: 'processed',
-    preview: '/api/placeholder/400/300'
-  }
-];
-
-// Document Card Component
-const DocumentCard = ({ document }) => {
-  const [isHovered, setIsHovered] = useState(false);
-  const navigate = useNavigate();
-
-  // Get status color
-  const getStatusColor = (status) => {
-    switch(status) {
-      case 'processed': return '#2e7d32'; // success green
-      case 'pending': return '#ed6c02';   // warning orange
-      case 'rejected': return '#d32f2f';  // error red
-      default: return '#757575';          // default grey
-    }
-  };
-  
-  const cardStyle = {
-    height: '100%',
-    display: 'flex',
-    flexDirection: 'column',
-    transition: 'all 0.3s ease',
-    cursor: 'pointer',
-    position: 'relative',
-    overflow: 'hidden',
-    backgroundColor: isHovered ? 'black' : 'white',
-    color: isHovered ? 'white' : '#333',
-    borderRadius: '8px',
-    boxShadow: isHovered ? '0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23)' : '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
-    transform: isHovered ? 'translateY(-5px)' : 'translateY(0)'
-  };
-  
-  const overlayStyle = {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    opacity: isHovered ? 1 : 0,
-    transition: 'opacity 0.3s ease'
-  };
-  
-  const backgroundStyle = {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundImage: `url(${document.preview})`,
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-    opacity: 0.1,
-    transition: 'opacity 0.3s ease'
-  };
-  
-  const statusChipStyle = {
-    position: 'absolute',
-    top: '12px',
-    right: '12px',
-    zIndex: 2,
-    backgroundColor: getStatusColor(document.status),
-    color: 'white',
-    padding: '2px 8px',
-    borderRadius: '12px',
-    fontSize: '10px',
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px'
-  };
-  
-  const contentStyle = {
-    position: 'relative',
-    zIndex: 1,
-    transition: 'opacity 0.3s ease',
-    flexGrow: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'space-between',
-    padding: '16px',
-    opacity: isHovered ? 0 : 1
-  };
-  
-  const titleStyle = {
-    fontSize: '16px',
-    fontWeight: 'bold',
-    marginBottom: '8px',
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis'
-  };
-  
-  const typeStyle = {
-    fontSize: '14px',
-    color: isHovered ? 'rgba(255,255,255,0.7)' : '#666',
-    marginBottom: '16px'
-  };
-  
-  const metaContainerStyle = {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: '16px'
-  };
-  
-  const dateStyle = {
-    fontSize: '12px',
-    color: isHovered ? 'rgba(255,255,255,0.7)' : '#757575'
-  };
-  
-  const companyStyle = {
-    fontSize: '12px',
-    fontWeight: '500',
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis'
-  };
-  
-  const hoverInfoStyle = {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 2,
-    padding: '16px',
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'center',
-    alignItems: 'center',
-    opacity: isHovered ? 1 : 0,
-    transform: isHovered ? 'translateY(0)' : 'translateY(10px)',
-    transition: 'opacity 0.3s ease, transform 0.3s ease',
-    color: 'white'
-  };
-  
-  const hoverTitleStyle = {
-    fontSize: '18px',
-    fontWeight: 'bold',
-    marginBottom: '8px',
-    textAlign: 'center'
-  };
-  
-  const hoverDetailStyle = {
-    textAlign: 'center',
-    marginBottom: '4px',
-    fontSize: '14px'
-  };
-  
-  const hoverButtonStyle = {
-    marginTop: '16px',
-    padding: '6px 16px',
-    border: '1px solid white',
-    borderRadius: '4px',
-    backgroundColor: 'transparent',
-    color: 'white',
-    cursor: 'pointer',
-    transition: 'background-color 0.3s ease',
-    fontSize: '14px'
-  };
-  
-  const actionsStyle = {
-    position: 'absolute',
-    bottom: '8px',
-    right: '8px',
-    zIndex: 3,
-    display: 'flex',
-    justifyContent: 'flex-end',
-    opacity: isHovered ? 1 : 0,
-    transform: isHovered ? 'translateY(0)' : 'translateY(10px)',
-    transition: 'opacity 0.3s ease, transform 0.3s ease'
-  };
-  
-  const actionButtonStyle = {
-    width: '30px',
-    height: '30px',
-    borderRadius: '50%',
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    color: 'white',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: '8px',
-    cursor: 'pointer',
-    border: 'none',
-    fontSize: '14px'
-  };
-  
-  const handleProcessClick = (e) => {
-    e.stopPropagation();
-    navigate(`/documents/process/${document.id}`);
-  };
-  
-  const handleDownloadClick = (e) => {
-    e.stopPropagation();
-    // Implementation would go here
-    console.log(`Downloading document ${document.id}`);
-  };
-  
-  const handleCardClick = () => {
-    navigate(`/documents/view/${document.id}`);
-  };
-
-  return (
-    <div 
-      style={cardStyle}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      onClick={handleCardClick}
-    >
-      {/* Background image */}
-      <div style={backgroundStyle}></div>
-      
-      {/* Overlay */}
-      <div style={overlayStyle}></div>
-      
-      {/* Status indicator */}
-      <div style={statusChipStyle}>
-        {document.status}
-      </div>
-      
-      {/* Normal content - visible by default */}
-      <div style={contentStyle}>
-        <div>
-          <div style={titleStyle}>{document.title}</div>
-          <div style={typeStyle}>{document.type}</div>
-        </div>
-        
-        <div style={metaContainerStyle}>
-          <div style={dateStyle}>{new Date(document.date).toLocaleDateString()}</div>
-          <div style={companyStyle}>{document.company}</div>
-        </div>
-      </div>
-      
-      {/* Hover content - visible on hover */}
-      <div style={hoverInfoStyle}>
-        <div style={hoverTitleStyle}>{document.title}</div>
-        
-        <div style={{margin: '8px 0'}}>
-          <div style={hoverDetailStyle}>Type: {document.type}</div>
-          <div style={hoverDetailStyle}>Company: {document.company}</div>
-          <div style={hoverDetailStyle}>Date: {new Date(document.date).toLocaleDateString()}</div>
-        </div>
-        
-        <button style={hoverButtonStyle}>
-          View Document
-        </button>
-      </div>
-      
-      {/* Action buttons - visible on hover */}
-      <div style={actionsStyle}>
-        {document.status === 'pending' && (
-          <button
-            style={actionButtonStyle}
-            onClick={handleProcessClick}
-            title="Process"
-          >
-            ✓
-          </button>
-        )}
-        
-        <button
-          style={actionButtonStyle}
-          onClick={handleDownloadClick}
-          title="Download"
-        >
-          ⬇️
-        </button>
-      </div>
-    </div>
-  );
-};
-
-// Stats Card Component
-const StatCard = ({ icon, value, title, color }) => {
-  const [isHovered, setIsHovered] = useState(false);
-  
-  const getColor = (colorName) => {
-    switch(colorName) {
-      case 'primary': return '#1976d2';
-      case 'secondary': return '#9c27b0';
-      case 'success': return '#2e7d32';
-      case 'warning': return '#ed6c02';
-      case 'info': return '#0288d1';
-      default: return '#1976d2';
-    }
-  };
-  
-  const mainColor = getColor(color);
-  
-  const cardStyle = {
-    height: '100%',
-    transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-    transform: isHovered ? 'translateY(-5px)' : 'translateY(0)',
-    boxShadow: isHovered ? '0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23)' : '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
-    backgroundColor: 'white',
-    borderRadius: '8px',
-    padding: '16px'
-  };
-  
-  const contentStyle = {
-    padding: '8px',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    textAlign: 'center'
-  };
-  
-  const avatarStyle = {
-    width: '56px',
-    height: '56px',
-    borderRadius: '50%',
-    backgroundColor: `${mainColor}20`,
-    color: mainColor,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: '16px',
-    fontSize: '24px'
-  };
-  
-  const valueStyle = {
-    fontSize: '28px',
-    fontWeight: 'bold'
-  };
-  
-  const titleStyle = {
-    fontSize: '14px',
-    color: '#666'
-  };
-  
-  return (
-    <div 
-      style={cardStyle}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      <div style={contentStyle}>
-        <div style={avatarStyle}>
-          {icon}
-        </div>
-        <div style={valueStyle}>{value}</div>
-        <div style={titleStyle}>{title}</div>
-      </div>
-    </div>
-  );
-};
-
-// Main Dashboard Component
 const Dashboard = () => {
   const { user } = useContext(AuthContext);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   
-  // Simulate loading
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1000);
-    return () => clearTimeout(timer);
+    // Load data if needed
+    setLoading(false);
   }, []);
-  
-  // Define stats based on user role
-  const stats = {
-    admin: [
-      { title: 'Companies', value: mockStats.companies, icon: '🏢', color: 'primary' },
-      { title: 'Accountants', value: mockStats.accountants, icon: '👨‍💼', color: 'secondary' },
-      { title: 'Documents', value: mockStats.documents, icon: '📄', color: 'info' },
-      { title: 'Pending Reviews', value: mockStats.pendingReviews, icon: '⏳', color: 'warning' }
-    ],
-    accountant: [
-      { title: 'My Companies', value: 12, icon: '🏢', color: 'primary' },
-      { title: 'Active Documents', value: 128, icon: '📄', color: 'info' },
-      { title: 'Pending Reviews', value: 17, icon: '⏳', color: 'warning' }
-    ],
-    company: [
-      { title: 'Documents', value: 34, icon: '📄', color: 'primary' },
-      { title: 'Processed', value: 28, icon: '✅', color: 'success' },
-      { title: 'Pending', value: 6, icon: '⏳', color: 'warning' }
-    ]
+
+  // Mock data for the dashboard
+  const newCustomers = {
+    days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+    values: [6, 8, 5, 3, 7]
   };
+
+  const kpiData = {
+    customers: 53,
+    deals: "68%",
+    revenue: "$15,890"
+  };
+
+  const pipelineStages = [
+    { 
+      name: "Contacted", count: 12, direction: "up", 
+      companies: [
+        { 
+          name: "ByteBridge", 
+          description: "Corporate and personal data protection on a turnkey basis",
+          date: "18 Apr",
+          stats: { tasks: 2, comments: 1, files: 1, activities: 3 }
+        },
+        { 
+          name: "AI Synergy", 
+          description: "Innovative solutions based on artificial intelligence",
+          date: "21 Mar",
+          stats: { tasks: 1, comments: 3, files: 1, activities: 3 }
+        }
+      ]
+    },
+    { 
+      name: "Negotiation", count: 17, direction: "down",
+      companies: [
+        { 
+          name: "SkillUp Hub", 
+          description: "Platform for professional development of specialists",
+          date: "09 Mar",
+          stats: { tasks: 4, comments: 1, files: 1, activities: 3 }
+        },
+        { 
+          name: "Thera Well", 
+          description: "Platform for psychological support and consultations",
+          date: "No due date",
+          stats: { tasks: 7, comments: 2, files: 1, activities: 3 }
+        }
+      ]
+    },
+    { 
+      name: "Offer Sent", count: 13, direction: "down",
+      companies: [
+        { 
+          name: "FitLife Nutrition", 
+          description: "Nutritious food and nutraceuticals for individuals",
+          date: "10 Mar",
+          stats: { tasks: 1, comments: 3, files: 1, activities: 3 }
+        },
+        { 
+          name: "Prime Estate", 
+          description: "Agency-developer of low-rise elite and commercial real estate",
+          date: "16 Apr",
+          stats: { tasks: 1, comments: 1, files: 1, activities: 3 },
+          location: "540 Realty Blvd, Miami, FL 33132",
+          contact: "contact@primeestate.com",
+          manager: "Antony Cardenas"
+        }
+      ]
+    },
+    { 
+      name: "Deal Closed", count: 12, direction: "up",
+      companies: [
+        { 
+          name: "CloudSphere", 
+          description: "Cloud services for data storage and processing for business",
+          date: "24 Mar",
+          stats: { tasks: 2, comments: 1, files: 1, activities: 3 }
+        },
+        { 
+          name: "Advantage Media", 
+          description: "Full cycle of digital advertising and social media promotion",
+          date: "05 Apr",
+          stats: { tasks: 1, comments: 3, files: 1, activities: 3 }
+        },
+        { 
+          name: "Safebank Solutions", 
+          description: "Innovative financial technologies and digital payment systems",
+          date: "30 Mar",
+          stats: { tasks: 4, comments: 7, files: 1, activities: 3 }
+        },
+        { 
+          name: "NextGen University", 
+          description: "",
+          date: "",
+          stats: { tasks: 0, comments: 0, files: 0, activities: 0 }
+        }
+      ]
+    }
+  ];
   
-  if (!user) {
+  // Helper function to render the new customers chart
+  const renderBarChart = () => {
+    const maxValue = Math.max(...newCustomers.values);
+    
     return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '60vh'
-      }}>
-        <div style={{
-          width: '40px',
-          height: '40px',
-          border: '4px solid #f3f3f3',
-          borderTop: '4px solid #3498db',
-          borderRadius: '50%',
-          animation: 'spin 2s linear infinite'
-        }}></div>
-        <style>{`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}</style>
-      </div>
-    );
-  }
-  
-  // Get stats based on user role
-  const userStats = stats[user.user.role] || stats.company;
-  
-  const containerStyle = {
-    maxWidth: '1400px',
-    margin: '0 auto',
-    padding: '0 24px'
-  };
-  
-  const welcomeHeaderStyle = {
-    padding: '32px',
-    marginBottom: '32px',
-    background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)',
-    color: 'white',
-    borderRadius: '8px',
-    position: 'relative',
-    overflow: 'hidden'
-  };
-  
-  const welcomeTitleStyle = {
-    fontSize: '24px',
-    fontWeight: 'bold',
-    marginBottom: '8px'
-  };
-  
-  const welcomeTextStyle = {
-    opacity: 0.8,
-    maxWidth: '800px'
-  };
-  
-  const statsContainerStyle = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-    gap: '24px',
-    marginBottom: '40px'
-  };
-  
-  const sectionHeaderStyle = {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '24px'
-  };
-  
-  const sectionTitleStyle = {
-    fontSize: '20px',
-    fontWeight: 'bold'
-  };
-  
-  const viewAllButtonStyle = {
-    padding: '8px 16px',
-    border: '1px solid #1976d2',
-    borderRadius: '4px',
-    color: '#1976d2',
-    backgroundColor: 'transparent',
-    cursor: 'pointer',
-    fontSize: '14px',
-    textDecoration: 'none',
-    display: 'inline-block'
-  };
-  
-  const documentsGridStyle = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-    gap: '24px',
-    marginBottom: '40px'
-  };
-  
-  const quickActionsStyle = {
-    padding: '24px',
-    marginBottom: '40px',
-    backgroundColor: 'white',
-    borderRadius: '8px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)'
-  };
-  
-  const actionButtonsContainerStyle = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-    gap: '16px',
-    marginTop: '24px'
-  };
-  
-  const quickActionButtonStyle = (isPrimary) => ({
-    padding: '16px',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '8px',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    transition: 'all 0.3s ease',
-    backgroundColor: isPrimary ? '#1976d2' : 'transparent',
-    color: isPrimary ? 'white' : '#333',
-    border: isPrimary ? 'none' : '1px solid #ddd',
-    textDecoration: 'none'
-  });
-  
-  const actionIconStyle = {
-    fontSize: '24px'
-  };
-  
-  const dividerStyle = {
-    height: '1px',
-    backgroundColor: '#eee',
-    border: 'none',
-    margin: '16px 0 24px'
-  };
-  
-  const activityStyle = {
-    padding: '24px',
-    backgroundColor: 'white',
-    borderRadius: '8px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)'
-  };
-  
-  const activityItemStyle = {
-    padding: '16px 0',
-    display: 'flex',
-    alignItems: 'center',
-    borderBottom: '1px solid #eee'
-  };
-  
-  const activityAvatarStyle = (color) => ({
-    width: '40px',
-    height: '40px',
-    borderRadius: '50%',
-    backgroundColor: `${getColor(color)}20`,
-    color: getColor(color),
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: '16px'
-  });
-  
-  const activityContentStyle = {
-    flexGrow: 1
-  };
-  
-  const activityActionStyle = {
-    fontSize: '14px',
-    fontWeight: '500',
-    marginBottom: '2px'
-  };
-  
-  const activityDetailsStyle = {
-    fontSize: '14px',
-    color: '#666'
-  };
-  
-  const activityTimeStyle = {
-    fontSize: '12px',
-    color: '#999'
-  };
-  
-  const viewAllActivityStyle = {
-    display: 'block',
-    textAlign: 'center',
-    padding: '8px',
-    marginTop: '16px',
-    color: '#1976d2',
-    textDecoration: 'none',
-    cursor: 'pointer'
-  };
-  
-  function getColor(colorName) {
-    switch(colorName) {
-      case 'primary': return '#1976d2';
-      case 'secondary': return '#9c27b0';
-      case 'success': return '#2e7d32';
-      case 'warning': return '#ed6c02';
-      case 'info': return '#0288d1';
-      case 'error': return '#d32f2f';
-      default: return '#1976d2';
-    }
-  }
-  
-  const renderQuickActions = () => {
-    if (user.user.role === 'admin') {
-      return (
-        <>
-          <div style={actionButtonsContainerStyle}>
-            <Link to="/companies" style={quickActionButtonStyle(true)}>
-              <div style={actionIconStyle}>🏢</div>
-              <div>View Companies</div>
-            </Link>
-            <Link to="/accountants" style={quickActionButtonStyle(false)}>
-              <div style={actionIconStyle}>👨‍💼</div>
-              <div>Manage Accountants</div>
-            </Link>
-            <Link to="/companies/new" style={quickActionButtonStyle(false)}>
-              <div style={actionIconStyle}>➕</div>
-              <div>Add New Company</div>
-            </Link>
-            <Link to="/documents" style={quickActionButtonStyle(false)}>
-              <div style={actionIconStyle}>🔍</div>
-              <div>Review Documents</div>
-            </Link>
-          </div>
-        </>
-      );
-    } else if (user.user.role === 'accountant') {
-      return (
-        <>
-          <div style={actionButtonsContainerStyle}>
-            <Link to="/companies" style={quickActionButtonStyle(true)}>
-              <div style={actionIconStyle}>🏢</div>
-              <div>My Companies</div>
-            </Link>
-            <Link to="/documents" style={quickActionButtonStyle(false)}>
-              <div style={actionIconStyle}>📄</div>
-              <div>Review Documents</div>
-            </Link>
-            <Link to="/documents/upload" style={quickActionButtonStyle(false)}>
-              <div style={actionIconStyle}>⬆️</div>
-              <div>Upload Document</div>
-            </Link>
-            <Link to="/profile" style={quickActionButtonStyle(false)}>
-              <div style={actionIconStyle}>👤</div>
-              <div>My Profile</div>
-            </Link>
-          </div>
-        </>
-      );
-    } else {
-      return (
-        <>
-          <div style={actionButtonsContainerStyle}>
-            <Link to="/documents/upload" style={quickActionButtonStyle(true)}>
-              <div style={actionIconStyle}>⬆️</div>
-              <div>Upload Document</div>
-            </Link>
-            <Link to="/documents" style={quickActionButtonStyle(false)}>
-              <div style={actionIconStyle}>📄</div>
-              <div>View All Documents</div>
-            </Link>
-            <Link to="/profile" style={quickActionButtonStyle(false)}>
-              <div style={actionIconStyle}>👤</div>
-              <div>My Profile</div>
-            </Link>
-            <Link to="/accountant" style={quickActionButtonStyle(false)}>
-              <div style={actionIconStyle}>👨‍💼</div>
-              <div>Contact Accountant</div>
-            </Link>
-          </div>
-        </>
-      );
-    }
-  };
-  
-  return (
-    <div style={containerStyle}>
-      {/* Welcome Header */}
-      <div style={welcomeHeaderStyle}>
-        <div style={{maxWidth: '800px', margin: '0 auto'}}>
-          <div style={welcomeTitleStyle}>
-            Welcome back, {user.user.name}!
-          </div>
-          <div style={welcomeTextStyle}>
-            {user.user.role === 'admin' && 'Manage your accounting system from your dashboard. Here\'s an overview of your current status.'}
-            {user.user.role === 'accountant' && 'Track your client companies and their documents. Everything you need is right here.'}
-            {user.user.role === 'company' && 'Manage your accounting documents and stay connected with your accountant.'}
-          </div>
+      <div className="chart-container">
+        <div className="chart-y-labels">
+          <span>10</span>
+          <span>5</span>
+          <span>0</span>
         </div>
-      </div>
-      
-      {/* Stats Cards */}
-      <div style={statsContainerStyle}>
-        {userStats.map((stat, index) => (
-          <StatCard 
-            key={index}
-            icon={stat.icon} 
-            value={stat.value} 
-            title={stat.title} 
-            color={stat.color} 
-          />
-        ))}
-      </div>
-      
-      {/* Recent Documents Section */}
-      <div style={sectionHeaderStyle}>
-        <div style={sectionTitleStyle}>Recent Documents</div>
-        <Link to="/documents" style={viewAllButtonStyle}>
-          View All
-        </Link>
-      </div>
-      
-      <div style={documentsGridStyle}>
-        {mockDocuments.map((doc) => (
-          <DocumentCard key={doc.id} document={doc} />
-        ))}
-      </div>
-      
-      {/* Quick Actions */}
-      <div style={quickActionsStyle}>
-        <div style={sectionTitleStyle}>Quick Actions</div>
-        <hr style={dividerStyle} />
-        
-        {renderQuickActions()}
-      </div>
-      
-      {/* Recent Activity */}
-      <div style={activityStyle}>
-        <div style={sectionTitleStyle}>Recent Activity</div>
-        <hr style={dividerStyle} />
-        
-        <div>
-          {[
-            { action: 'Document Upload', details: 'Invoice #INV-2023-056', date: '10 minutes ago', icon: '⬆️', color: 'primary' },
-            { action: 'Document Processed', details: 'Receipt #REC-789', date: '2 hours ago', icon: '✓', color: 'success' },
-            { action: 'New Comment', details: 'On Invoice #INV-2023-042', date: '3 hours ago', icon: '💬', color: 'info' },
-            { action: 'Monthly Report', details: 'May 2025 Report Available', date: '1 day ago', icon: '📊', color: 'secondary' }
-          ].map((activity, index) => (
-            <div 
-              key={index} 
-              style={{
-                ...activityItemStyle,
-                borderBottom: index < 3 ? '1px solid #eee' : 'none'
-              }}
-            >
-              <div style={activityAvatarStyle(activity.color)}>
-                {activity.icon}
-              </div>
-              <div style={activityContentStyle}>
-                <div style={activityActionStyle}>
-                  {activity.action}
-                </div>
-                <div style={activityDetailsStyle}>
-                  {activity.details}
-                </div>
-              </div>
-              <div style={activityTimeStyle}>
-                {activity.date}
-              </div>
+        <div className="chart-bars">
+          {newCustomers.days.map((day, index) => (
+            <div className="chart-bar-group" key={day}>
+              <div 
+                className="chart-bar" 
+                style={{ 
+                  height: `${(newCustomers.values[index] / 10) * 100}%`,
+                  backgroundColor: day === 'Thu' ? '#f1f1f1' : '#333'
+                }}
+              ></div>
+              <span className="chart-x-label">{day}</span>
             </div>
           ))}
         </div>
-        
-        <div style={viewAllActivityStyle}>
-          View All Activity
+      </div>
+    );
+  };
+  
+  // Helper function to render the progress circle (68% successful deals)
+  const renderProgressCircle = () => {
+    const percentage = parseInt(kpiData.deals);
+    const circumference = 2 * Math.PI * 40;
+    const offset = circumference - (percentage / 100) * circumference;
+    
+    return (
+      <div className="progress-circle-container">
+        <svg className="progress-circle" width="120" height="120" viewBox="0 0 120 120">
+          <circle
+            className="progress-circle-bg"
+            cx="60"
+            cy="60"
+            r="40"
+            strokeWidth="8"
+            fill="none"
+          />
+          <circle
+            className="progress-circle-bar"
+            cx="60"
+            cy="60"
+            r="40"
+            strokeWidth="8"
+            fill="none"
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+            strokeLinecap="round"
+            transform="rotate(-90 60 60)"
+          />
+          <text x="60" y="65" textAnchor="middle" className="progress-text">
+            {percentage}%
+          </text>
+        </svg>
+        <div className="progress-label">Successful deals</div>
+      </div>
+    );
+  };
+
+  // Helper function to render tasks & prepayments section
+  const renderTasksPrepaymentsSection = () => {
+    return (
+      <div className="tasks-prepayments">
+        <div className="task-section">
+          <div className="task-header">
+            <span>Tasks</span>
+            <span>In progress</span>
+          </div>
+          <div className="task-arrow">→</div>
         </div>
+        <div className="prepayment-section">
+          <div className="prepayment-header">
+            <span>Prepayments</span>
+            <span>from customers</span>
+          </div>
+          <div className="prepayment-arrow">→</div>
+        </div>
+      </div>
+    );
+  };
+
+  // Helper function to render the pipeline stage sections
+  const renderCompanyCard = (company, stageIndex) => {
+    const handleViewCompany = (e, name) => {
+      e.stopPropagation();
+      // Navigate to company detail page
+      console.log(`Viewing company: ${name}`);
+      navigate(`/companies/${name.toLowerCase().replace(/\s+/g, '-')}`);
+    };
+
+    return (
+      <div className="company-card" key={company.name}>
+        <div className="company-header">
+          <h4>{company.name}</h4>
+          <button className="more-options">⋮</button>
+        </div>
+        <p className="company-description">{company.description}</p>
+        
+        {company.location && (
+          <div className="company-location">
+            <span>📍 {company.location}</span>
+          </div>
+        )}
+        
+        {company.contact && (
+          <div className="company-contact">
+            <span>📧 {company.contact}</span>
+          </div>
+        )}
+        
+        {company.manager && (
+          <div className="company-manager">
+            <div className="manager-label">Manager:</div>
+            <div className="manager-name">{company.manager}</div>
+          </div>
+        )}
+        
+        <div className="company-details">
+          <div className="company-date">{company.date}</div>
+          <div className="company-metrics">
+            <span>{company.stats.tasks}</span> <span>•</span> <span>{company.stats.comments}</span>
+          </div>
+        </div>
+
+        {/* Hover details - additional details visible on hover */}
+        <div className="company-hover-details">
+          <div className="hover-title">{company.name}</div>
+          
+          <div className="hover-details-info">
+            <div className="hover-section">
+              <h5 className="hover-section-title">Company Info</h5>
+              <div className="hover-detail">{company.description}</div>
+              {company.location && <div className="hover-detail">📍 {company.location}</div>}
+              {company.contact && <div className="hover-detail">📧 {company.contact}</div>}
+              {company.manager && <div className="hover-detail">👤 Manager: {company.manager}</div>}
+            </div>
+            
+            <div className="hover-section">
+              <h5 className="hover-section-title">Statistics</h5>
+              <div className="hover-detail">✓ Tasks: {company.stats.tasks}</div>
+              <div className="hover-detail">💬 Comments: {company.stats.comments}</div>
+              {company.stats.files > 0 && (
+                <div className="hover-detail">📄 Files: {company.stats.files}</div>
+              )}
+              {company.stats.activities > 0 && (
+                <div className="hover-detail">📊 Activities: {company.stats.activities}</div>
+              )}
+              {company.date && <div className="hover-detail">📅 Due: {company.date}</div>}
+            </div>
+          </div>
+          
+          <div className="hover-actions">
+            <button 
+              className="view-company-button"
+              onClick={(e) => handleViewCompany(e, company.name)}
+            >
+              View Company
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Helper function to render a pipeline stage
+  const renderDealStageSection = (stage, index) => {
+    return (
+      <div className="pipeline-stage" key={stage.name}>
+        <div className="stage-header">
+          <h3>{stage.name}</h3>
+          <div className="stage-count">
+            {stage.count} {stage.direction === "up" ? <span>↑</span> : <span>↓</span>}
+          </div>
+        </div>
+        {stage.companies.map(company => renderCompanyCard(company, index))}
+      </div>
+    );
+  };
+
+  if (loading) {
+    return <div className="loading-container">Loading...</div>;
+  }
+  
+  return (
+    <div className="dashboard-container">
+      <div className="dashboard-header">
+        <div className="search-section">
+          <input type="text" placeholder="Search customer..." className="search-input" />
+        </div>
+        <div className="actions-section">
+          <div className="filter-buttons">
+            <button className="sort-button">
+              <span>Sort by</span>
+              <span className="icon-down">▼</span>
+            </button>
+            <button className="filter-button">
+              <span>Filters</span>
+              <span className="icon-filter">⚙️</span>
+            </button>
+          </div>
+          <div className="user-actions">
+            <button className="me-button">Me</button>
+            <button className="add-customer-button">
+              <span className="icon-add">+</span>
+              <span>Add customer</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* New customers section */}
+      <div className="dashboard-section">
+        <h2 className="section-title">New customers</h2>
+        {renderBarChart()}
+      </div>
+      
+      {/* KPI metrics */}
+      <div className="kpi-section">
+        <div className="kpi-card">
+          <h2 className="kpi-value">{kpiData.customers}</h2>
+        </div>
+        <div className="kpi-card circular">
+          {renderProgressCircle()}
+        </div>
+        <div className="kpi-card">
+          <h2 className="kpi-value">{kpiData.revenue}</h2>
+        </div>
+      </div>
+      
+      {/* Tasks and prepayments section */}
+      {renderTasksPrepaymentsSection()}
+      
+      {/* Pipeline Stages */}
+      <div className="pipeline-container">
+        {pipelineStages.map((stage, index) => renderDealStageSection(stage, index))}
       </div>
     </div>
   );

@@ -1,12 +1,13 @@
-/* MainLayout Styles */
+/* Main Layout styles */
 .main-layout {
   display: flex;
   min-height: 100vh;
-  background-color: var(--bg-color);
+  background-color: #f5f5f5;
 }
 
 .main-content {
   flex: 1;
+  margin-left: 250px;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -14,11 +15,12 @@
 
 .page-container {
   flex: 1;
-  padding: 2rem;
+  padding: 1.5rem;
   margin-top: 70px;
   overflow-x: hidden;
 }
 
+/* Loading styles */
 .loading-container {
   display: flex;
   justify-content: center;
@@ -28,17 +30,11 @@
 }
 
 .loading-spinner {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.spinner {
   width: 40px;
   height: 40px;
   border: 3px solid rgba(0, 0, 0, 0.1);
   border-radius: 50%;
-  border-top-color: var(--primary-color);
+  border-top-color: #333;
   animation: spin 1s ease-in-out infinite;
 }
 
@@ -48,14 +44,20 @@
   }
 }
 
+/* Media queries for responsive design */
 @media (max-width: 992px) {
-  .page-container {
-    padding: 1.5rem;
+  .main-content {
+    margin-left: 220px;
   }
 }
 
 @media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+  }
+  
   .page-container {
+    margin-top: 0;
     padding: 1rem;
   }
 }

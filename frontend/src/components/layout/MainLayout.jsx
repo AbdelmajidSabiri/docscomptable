@@ -11,26 +11,24 @@ const MainLayout = () => {
   
   if (loading) {
     return (
-      <Box className="loading-container">
-        <div className="loading-spinner">
-          <div className="spinner"></div>
-        </div>
-      </Box>
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+      </div>
     );
   }
   
   return (
-    <Box className="main-layout">
+    <div className="main-layout">
       {user && <Sidebar />}
       
-      <Box className="main-content">
-        <Header />
+      <div className="main-content">
+        {user && <Header />}
         
-        <Box className="page-container">
+        <div className="page-container">
           <Outlet />
-        </Box>
-      </Box>
-    </Box>
+        </div>
+      </div>
+    </div>
   );
 };
 
