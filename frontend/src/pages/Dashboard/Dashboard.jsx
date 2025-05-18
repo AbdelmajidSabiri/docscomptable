@@ -1,361 +1,924 @@
-import { useState, useContext, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useContext } from 'react';
+import { Link } from 'react-router-dom';
+import { 
+  Container,
+  Grid,
+  Paper,
+  Typography,
+  Box,
+  Card,
+  CardContent,
+  CircularProgress,
+  Button,
+  Divider,
+  Alert,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Chip
+} from '@mui/material';
 import { AuthContext } from '../../contexts/AuthContext';
-import '../../styles/pages/Dashboard.css';
+import useFetch from '../../hooks/useFetch';
+import StatCard from '../../components/common/StatCard';
+import ActivityItem from '../../components/common/ActivityItem';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 const Dashboard = () => {
   const { user } = useContext(AuthContext);
-  const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
   
-  useEffect(() => {
-    // Load data if needed
-    setLoading(false);
-  }, []);
+  // Fetch data based on user role
+  const {
+    data: dashboardData,
+    loading: dataLoading,
+    error: dataError
+  } = useFetch(user ? `${API_URL}/stats/${user.user.role === 'admin' ? 'overview' : user.user.role + '/' + user.profile?.id}` : null);
+  
+  // Fetch recent documents
+  const {
+    data: recentDocuments,
+    loading: documentsLoading,
+    error: documentsError
+  } = useFetch(user && user.user.role !== 'admin' ? `${API_URL}/documents/recent?limit=5` : null);
+  
+  // Fetch notifications
+  const {
+    data: notifications,
+    loading: notificationsLoading,
+    error: notificationsError
+  } = useFetch(user ? `${API_URL}/notifications` : null);
+  
+  if (!user) {
+    return (
+      <Container maxWidth="sm" sx={{ mt: 4 }}>
+        <Alert severity="warning">
+          Please log in to view the dashboard.
+        </Alert>
+      </Container>
+    );
+  }
+  
+  if (dataLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+  
+  if (dataError) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4 }}>
+        <Alert severity="error">
+          {dataError.message || 'Failed to load dashboard data'}
+        </Alert>
+      </Container>
+    );
+  }
+  
+  // Render dashboard based on user role
+  if (user.user.role === 'admin') {
+    return <AdminDashboard data={dashboardData} notifications={notifications} />;
+  } else if (user.user.role === 'accountant') {
+    return <AccountantDashboard 
+      data={dashboardData} 
+      documents={recentDocuments} 
+      notifications={notifications}
+      documentsLoading={documentsLoading}
+    />;
+  } else {
+    return <CompanyDashboard 
+      data={dashboardData} 
+      documents={recentDocuments} 
+      notifications={notifications}
+      documentsLoading={documentsLoading}
+    />;
+  }
+};
 
-  // Mock data for the dashboard
-  const newCustomers = {
-    days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
-    values: [6, 8, 5, 3, 7]
-  };
-
-  const kpiData = {
-    customers: 53,
-    deals: "68%",
-    revenue: "$15,890"
-  };
-
-  const pipelineStages = [
+const AdminDashboard = ({ data, notifications }) => {
+  // Mock recent activity data (would come from API in production)
+  const recentActivity = [
     { 
-      name: "Contacted", count: 12, direction: "up", 
-      companies: [
-        { 
-          name: "ByteBridge", 
-          description: "Corporate and personal data protection on a turnkey basis",
-          date: "18 Apr",
-          stats: { tasks: 2, comments: 1, files: 1, activities: 3 }
-        },
-        { 
-          name: "AI Synergy", 
-          description: "Innovative solutions based on artificial intelligence",
-          date: "21 Mar",
-          stats: { tasks: 1, comments: 3, files: 1, activities: 3 }
-        }
-      ]
+      action: 'New Company Registration', 
+      details: 'TechStart Inc. registered by John Smith', 
+      date: '1 hour ago',
+      icon: '🏢',
+      color: 'primary'
     },
     { 
-      name: "Negotiation", count: 17, direction: "down",
-      companies: [
-        { 
-          name: "SkillUp Hub", 
-          description: "Platform for professional development of specialists",
-          date: "09 Mar",
-          stats: { tasks: 4, comments: 1, files: 1, activities: 3 }
-        },
-        { 
-          name: "Thera Well", 
-          description: "Platform for psychological support and consultations",
-          date: "No due date",
-          stats: { tasks: 7, comments: 2, files: 1, activities: 3 }
-        }
-      ]
+      action: 'Document Processed', 
+      details: 'Invoice #2023-056 processed by Jane Doe', 
+      date: '3 hours ago',
+      icon: '✓',
+      color: 'success'
     },
     { 
-      name: "Offer Sent", count: 13, direction: "down",
-      companies: [
-        { 
-          name: "FitLife Nutrition", 
-          description: "Nutritious food and nutraceuticals for individuals",
-          date: "10 Mar",
-          stats: { tasks: 1, comments: 3, files: 1, activities: 3 }
-        },
-        { 
-          name: "Prime Estate", 
-          description: "Agency-developer of low-rise elite and commercial real estate",
-          date: "16 Apr",
-          stats: { tasks: 1, comments: 1, files: 1, activities: 3 },
-          location: "540 Realty Blvd, Miami, FL 33132",
-          contact: "contact@primeestate.com",
-          manager: "Antony Cardenas"
-        }
-      ]
+      action: 'Account Activated', 
+      details: 'Acme Corp account activated', 
+      date: '5 hours ago',
+      icon: '✅',
+      color: 'info'
     },
     { 
-      name: "Deal Closed", count: 12, direction: "up",
-      companies: [
-        { 
-          name: "CloudSphere", 
-          description: "Cloud services for data storage and processing for business",
-          date: "24 Mar",
-          stats: { tasks: 2, comments: 1, files: 1, activities: 3 }
-        },
-        { 
-          name: "Advantage Media", 
-          description: "Full cycle of digital advertising and social media promotion",
-          date: "05 Apr",
-          stats: { tasks: 1, comments: 3, files: 1, activities: 3 }
-        },
-        { 
-          name: "Safebank Solutions", 
-          description: "Innovative financial technologies and digital payment systems",
-          date: "30 Mar",
-          stats: { tasks: 4, comments: 7, files: 1, activities: 3 }
-        },
-        { 
-          name: "NextGen University", 
-          description: "",
-          date: "",
-          stats: { tasks: 0, comments: 0, files: 0, activities: 0 }
-        }
-      ]
+      action: 'New Accountant', 
+      details: 'Robert Johnson joined as accountant', 
+      date: 'Yesterday',
+      icon: '👤',
+      color: 'secondary'
     }
   ];
   
-  // Helper function to render the new customers chart
-  const renderBarChart = () => {
-    const maxValue = Math.max(...newCustomers.values);
-    
-    return (
-      <div className="chart-container">
-        <div className="chart-y-labels">
-          <span>10</span>
-          <span>5</span>
-          <span>0</span>
-        </div>
-        <div className="chart-bars">
-          {newCustomers.days.map((day, index) => (
-            <div className="chart-bar-group" key={day}>
-              <div 
-                className="chart-bar" 
-                style={{ 
-                  height: `${(newCustomers.values[index] / 10) * 100}%`,
-                  backgroundColor: day === 'Thu' ? '#f1f1f1' : '#333'
-                }}
-              ></div>
-              <span className="chart-x-label">{day}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
-  
-  // Helper function to render the progress circle (68% successful deals)
-  const renderProgressCircle = () => {
-    const percentage = parseInt(kpiData.deals);
-    const circumference = 2 * Math.PI * 40;
-    const offset = circumference - (percentage / 100) * circumference;
-    
-    return (
-      <div className="progress-circle-container">
-        <svg className="progress-circle" width="120" height="120" viewBox="0 0 120 120">
-          <circle
-            className="progress-circle-bg"
-            cx="60"
-            cy="60"
-            r="40"
-            strokeWidth="8"
-            fill="none"
-          />
-          <circle
-            className="progress-circle-bar"
-            cx="60"
-            cy="60"
-            r="40"
-            strokeWidth="8"
-            fill="none"
-            strokeDasharray={circumference}
-            strokeDashoffset={offset}
-            strokeLinecap="round"
-            transform="rotate(-90 60 60)"
-          />
-          <text x="60" y="65" textAnchor="middle" className="progress-text">
-            {percentage}%
-          </text>
-        </svg>
-        <div className="progress-label">Successful deals</div>
-      </div>
-    );
-  };
-
-  // Helper function to render tasks & prepayments section
-  const renderTasksPrepaymentsSection = () => {
-    return (
-      <div className="tasks-prepayments">
-        <div className="task-section">
-          <div className="task-header">
-            <span>Tasks</span>
-            <span>In progress</span>
-          </div>
-          <div className="task-arrow">→</div>
-        </div>
-        <div className="prepayment-section">
-          <div className="prepayment-header">
-            <span>Prepayments</span>
-            <span>from customers</span>
-          </div>
-          <div className="prepayment-arrow">→</div>
-        </div>
-      </div>
-    );
-  };
-
-  // Helper function to render the pipeline stage sections
-  const renderCompanyCard = (company, stageIndex) => {
-    const handleViewCompany = (e, name) => {
-      e.stopPropagation();
-      // Navigate to company detail page
-      console.log(`Viewing company: ${name}`);
-      navigate(`/companies/${name.toLowerCase().replace(/\s+/g, '-')}`);
-    };
-
-    return (
-      <div className="company-card" key={company.name}>
-        <div className="company-header">
-          <h4>{company.name}</h4>
-          <button className="more-options">⋮</button>
-        </div>
-        <p className="company-description">{company.description}</p>
-        
-        {company.location && (
-          <div className="company-location">
-            <span>📍 {company.location}</span>
-          </div>
-        )}
-        
-        {company.contact && (
-          <div className="company-contact">
-            <span>📧 {company.contact}</span>
-          </div>
-        )}
-        
-        {company.manager && (
-          <div className="company-manager">
-            <div className="manager-label">Manager:</div>
-            <div className="manager-name">{company.manager}</div>
-          </div>
-        )}
-        
-        <div className="company-details">
-          <div className="company-date">{company.date}</div>
-          <div className="company-metrics">
-            <span>{company.stats.tasks}</span> <span>•</span> <span>{company.stats.comments}</span>
-          </div>
-        </div>
-
-        {/* Hover details - additional details visible on hover */}
-        <div className="company-hover-details">
-          <div className="hover-title">{company.name}</div>
-          
-          <div className="hover-details-info">
-            <div className="hover-section">
-              <h5 className="hover-section-title">Company Info</h5>
-              <div className="hover-detail">{company.description}</div>
-              {company.location && <div className="hover-detail">📍 {company.location}</div>}
-              {company.contact && <div className="hover-detail">📧 {company.contact}</div>}
-              {company.manager && <div className="hover-detail">👤 Manager: {company.manager}</div>}
-            </div>
-            
-            <div className="hover-section">
-              <h5 className="hover-section-title">Statistics</h5>
-              <div className="hover-detail">✓ Tasks: {company.stats.tasks}</div>
-              <div className="hover-detail">💬 Comments: {company.stats.comments}</div>
-              {company.stats.files > 0 && (
-                <div className="hover-detail">📄 Files: {company.stats.files}</div>
-              )}
-              {company.stats.activities > 0 && (
-                <div className="hover-detail">📊 Activities: {company.stats.activities}</div>
-              )}
-              {company.date && <div className="hover-detail">📅 Due: {company.date}</div>}
-            </div>
-          </div>
-          
-          <div className="hover-actions">
-            <button 
-              className="view-company-button"
-              onClick={(e) => handleViewCompany(e, company.name)}
-            >
-              View Company
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Helper function to render a pipeline stage
-  const renderDealStageSection = (stage, index) => {
-    return (
-      <div className="pipeline-stage" key={stage.name}>
-        <div className="stage-header">
-          <h3>{stage.name}</h3>
-          <div className="stage-count">
-            {stage.count} {stage.direction === "up" ? <span>↑</span> : <span>↓</span>}
-          </div>
-        </div>
-        {stage.companies.map(company => renderCompanyCard(company, index))}
-      </div>
-    );
-  };
-
-  if (loading) {
-    return <div className="loading-container">Loading...</div>;
-  }
-  
   return (
-    <div className="dashboard-container">
-      <div className="dashboard-header">
-        <div className="search-section">
-          <input type="text" placeholder="Search customer..." className="search-input" />
-        </div>
-        <div className="actions-section">
-          <div className="filter-buttons">
-            <button className="sort-button">
-              <span>Sort by</span>
-              <span className="icon-down">▼</span>
-            </button>
-            <button className="filter-button">
-              <span>Filters</span>
-              <span className="icon-filter">⚙️</span>
-            </button>
-          </div>
-          <div className="user-actions">
-            <button className="me-button">Me</button>
-            <button className="add-customer-button">
-              <span className="icon-add">+</span>
-              <span>Add customer</span>
-            </button>
-          </div>
-        </div>
-      </div>
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" component="h1" gutterBottom>
+          Admin Dashboard
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          System overview and statistics
+        </Typography>
+      </Box>
+      
+      {/* Stats Overview */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid item xs={12} sm={6} md={3}>
+          <StatCard 
+            icon="👥" 
+            value={data?.users?.total || 0} 
+            title="Total Users" 
+            color="primary" 
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <StatCard 
+            icon="👨‍💼" 
+            value={data?.accountants?.total || 0} 
+            title="Accountants" 
+            color="secondary" 
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <StatCard 
+            icon="🏢" 
+            value={data?.companies?.total || 0} 
+            title="Companies" 
+            color="info" 
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <StatCard 
+            icon="📄" 
+            value={data?.documents?.total || 0} 
+            title="Documents" 
+            color="success" 
+          />
+        </Grid>
+      </Grid>
+      
+      {/* Second row - detailed stats */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        {/* Companies by Status */}
+        <Grid item xs={12} md={4}>
+          <Paper sx={{ p: 3, height: '100%' }}>
+            <Typography variant="h6" gutterBottom>
+              Companies by Status
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+            
+            <Grid container spacing={2}>
+              <Grid item xs={4}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="h4" color="success.main">
+                    {data?.companies?.byStatus?.active || 0}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Active
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={4}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="h4" color="warning.main">
+                    {data?.companies?.byStatus?.pending || 0}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Pending
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={4}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="h4" color="error.main">
+                    {data?.companies?.byStatus?.inactive || 0}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Inactive
+                  </Typography>
+                </Box>
+              </Grid>
+            </Grid>
+            
+            <Box sx={{ mt: 2, textAlign: 'center' }}>
+              <Button
+                component={Link}
+                to="/companies"
+                size="small"
+                sx={{ mt: 1 }}
+              >
+                View All Companies
+              </Button>
+            </Box>
+          </Paper>
+        </Grid>
+        
+        {/* Documents by Status */}
+        <Grid item xs={12} md={4}>
+          <Paper sx={{ p: 3, height: '100%' }}>
+            <Typography variant="h6" gutterBottom>
+              Documents by Status
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+            
+            <Grid container spacing={2}>
+              <Grid item xs={4}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="h4" color="success.main">
+                    {data?.documents?.byStatus?.processed || 0}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Processed
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={4}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="h4" color="warning.main">
+                    {data?.documents?.byStatus?.new || 0}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Pending
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={4}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="h4" color="error.main">
+                    {data?.documents?.byStatus?.rejected || 0}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Rejected
+                  </Typography>
+                </Box>
+              </Grid>
+            </Grid>
+            
+            <Box sx={{ mt: 2, textAlign: 'center' }}>
+              <Button
+                component={Link}
+                to="/documents"
+                size="small"
+                sx={{ mt: 1 }}
+              >
+                Browse Documents
+              </Button>
+            </Box>
+          </Paper>
+        </Grid>
+        
+        {/* Users by Role */}
+        <Grid item xs={12} md={4}>
+          <Paper sx={{ p: 3, height: '100%' }}>
+            <Typography variant="h6" gutterBottom>
+              Users by Role
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+            
+            <Grid container spacing={2}>
+              <Grid item xs={4}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="h4" color="primary.main">
+                    {data?.users?.byRole?.admin || 0}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Admin
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={4}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="h4" color="secondary.main">
+                    {data?.users?.byRole?.accountant || 0}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Accountant
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={4}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="h4" color="info.main">
+                    {data?.users?.byRole?.company || 0}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Company
+                  </Typography>
+                </Box>
+              </Grid>
+            </Grid>
+            
+            <Box sx={{ mt: 2, textAlign: 'center' }}>
+              <Button
+                component={Link}
+                to="/users"
+                size="small"
+                sx={{ mt: 1 }}
+              >
+                Manage Users
+              </Button>
+            </Box>
+          </Paper>
+        </Grid>
+      </Grid>
+      
+      {/* Third row - Activity and Tasks */}
+      <Grid container spacing={3}>
+        {/* Recent Activity */}
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ p: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Recent Activity
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+            
+            {recentActivity.map((activity, index) => (
+              <ActivityItem
+                key={index}
+                action={activity.action}
+                details={activity.details}
+                date={activity.date}
+                icon={activity.icon}
+                color={activity.color}
+              />
+            ))}
+            
+            <Box sx={{ mt: 2, textAlign: 'center' }}>
+              <Button
+                component={Link}
+                to="/activity"
+                size="small"
+              >
+                View All Activity
+              </Button>
+            </Box>
+          </Paper>
+        </Grid>
+        
+        {/* Pending Tasks */}
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ p: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Pending Approvals
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+            
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Type</TableCell>
+                    <TableCell>Name</TableCell>
+                    <TableCell>Date</TableCell>
+                    <TableCell align="right">Action</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {data?.companies?.byStatus?.pending > 0 ? (
+                    // Mock pending companies data (would come from API)
+                    [
+                      { id: 101, name: 'TechStart Inc.', date: '2023-05-15' },
+                      { id: 102, name: 'Global Enterprises', date: '2023-05-14' }
+                    ].map((company) => (
+                      <TableRow key={company.id}>
+                        <TableCell>
+                          <Chip label="Company" size="small" color="primary" />
+                        </TableCell>
+                        <TableCell>{company.name}</TableCell>
+                        <TableCell>{new Date(company.date).toLocaleDateString()}</TableCell>
+                        <TableCell align="right">
+                          <Button
+                            component={Link}
+                            to={`/companies/${company.id}`}
+                            size="small"
+                          >
+                            Review
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={4} align="center">
+                        No pending approvals
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
+        </Grid>
+      </Grid>
+    </Container>
+  );
+};
 
-      {/* New customers section */}
-      <div className="dashboard-section">
-        <h2 className="section-title">New customers</h2>
-        {renderBarChart()}
-      </div>
+const AccountantDashboard = ({ data, documents, notifications, documentsLoading }) => {
+  return (
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" component="h1" gutterBottom>
+          Accountant Dashboard
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          Your clients and documents overview
+        </Typography>
+      </Box>
       
-      {/* KPI metrics */}
-      <div className="kpi-section">
-        <div className="kpi-card">
-          <h2 className="kpi-value">{kpiData.customers}</h2>
-        </div>
-        <div className="kpi-card circular">
-          {renderProgressCircle()}
-        </div>
-        <div className="kpi-card">
-          <h2 className="kpi-value">{kpiData.revenue}</h2>
-        </div>
-      </div>
+      {/* Stats Overview */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid item xs={12} sm={6} md={3}>
+          <StatCard 
+            icon="🏢" 
+            value={data?.companies?.total || 0} 
+            title="Your Clients" 
+            color="primary" 
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <StatCard 
+            icon="📄" 
+            value={data?.documents?.total || 0} 
+            title="Total Documents" 
+            color="info" 
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <StatCard 
+            icon="✅" 
+            value={data?.documents?.byStatus?.processed || 0} 
+            title="Processed" 
+            color="success" 
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <StatCard 
+            icon="⏳" 
+            value={data?.documents?.byStatus?.new || 0} 
+            title="Pending" 
+            color="warning" 
+          />
+        </Grid>
+      </Grid>
       
-      {/* Tasks and prepayments section */}
-      {renderTasksPrepaymentsSection()}
+      {/* Second row - Client Management and Documents */}
+      <Grid container spacing={3}>
+        {/* Client Companies */}
+        <Grid item xs={12} md={5}>
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Your Clients
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+            
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Company</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell align="right">Action</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {/* Mock client companies data (would come from API) */}
+                  {[
+                    { id: 1, name: 'Acme Corporation', status: 'active' },
+                    { id: 2, name: 'TechStart Inc.', status: 'pending' },
+                    { id: 3, name: 'Global Enterprises', status: 'active' }
+                  ].map((company) => (
+                    <TableRow key={company.id}>
+                      <TableCell>{company.name}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={company.status}
+                          size="small"
+                          color={
+                            company.status === 'active' ? 'success' :
+                            company.status === 'pending' ? 'warning' :
+                            'error'
+                          }
+                        />
+                      </TableCell>
+                      <TableCell align="right">
+                        <Button
+                          component={Link}
+                          to={`/companies/${company.id}`}
+                          size="small"
+                        >
+                          View
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            
+            <Box sx={{ mt: 2, textAlign: 'center' }}>
+              <Button
+                component={Link}
+                to="/companies"
+                size="small"
+              >
+                View All Clients
+              </Button>
+            </Box>
+          </Paper>
+          
+          {/* Notifications */}
+          <Paper sx={{ p: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Recent Notifications
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+            
+            {notifications?.length > 0 ? (
+              notifications.slice(0, 5).map((notification) => (
+                <Box
+                  key={notification.id}
+                  sx={{
+                    py: 1.5,
+                    borderBottom: '1px solid',
+                    borderColor: 'divider',
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}
+                >
+                  <Box sx={{ mr: 1, fontSize: '1.2rem' }}>🔔</Box>
+                  <Box sx={{ flexGrow: 1 }}>
+                    <Typography variant="body2">
+                      {notification.message}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {new Date(notification.created_at).toLocaleString()}
+                    </Typography>
+                  </Box>
+                </Box>
+              ))
+            ) : (
+              <Typography variant="body2" color="text.secondary" align="center">
+                No new notifications
+              </Typography>
+            )}
+          </Paper>
+        </Grid>
+        
+        {/* Recent Documents */}
+        <Grid item xs={12} md={7}>
+          <Paper sx={{ p: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Recent Documents
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+            
+            {documentsLoading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+                <CircularProgress />
+              </Box>
+            ) : documents?.length > 0 ? (
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Document</TableCell>
+                      <TableCell>Company</TableCell>
+                      <TableCell>Date</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell align="right">Action</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {documents.map((doc) => (
+                      <TableRow key={doc.id}>
+                        <TableCell>{doc.document_type}</TableCell>
+                        <TableCell>{doc.company_name}</TableCell>
+                        <TableCell>{new Date(doc.document_date).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={doc.status}
+                            size="small"
+                            color={
+                              doc.status === 'processed' ? 'success' :
+                              doc.status === 'new' ? 'warning' :
+                              'error'
+                            }
+                          />
+                        </TableCell>
+                        <TableCell align="right">
+                          <Button
+                            component={Link}
+                            to={`/documents/view/${doc.id}`}
+                            size="small"
+                            sx={{ mr: 1 }}
+                          >
+                            View
+                          </Button>
+                          {doc.status === 'new' && (
+                            <Button
+                              component={Link}
+                              to={`/documents/process/${doc.id}`}
+                              size="small"
+                              variant="outlined"
+                              color="primary"
+                            >
+                              Process
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            ) : (
+              <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 3 }}>
+                No documents found
+              </Typography>
+            )}
+            
+            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between' }}>
+              <Button
+                component={Link}
+                to="/documents"
+                size="small"
+              >
+                View All Documents
+              </Button>
+              
+              <Button
+                component={Link}
+                to="/documents/upload"
+                size="small"
+                variant="contained"
+              >
+                Upload Document
+              </Button>
+            </Box>
+          </Paper>
+        </Grid>
+      </Grid>
+    </Container>
+  );
+};
+
+const CompanyDashboard = ({ data, documents, notifications, documentsLoading }) => {
+  return (
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" component="h1" gutterBottom>
+          Company Dashboard
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          Your documents and accounting overview
+        </Typography>
+      </Box>
       
-      {/* Pipeline Stages */}
-      <div className="pipeline-container">
-        {pipelineStages.map((stage, index) => renderDealStageSection(stage, index))}
-      </div>
-    </div>
+      {/* Stats Overview */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid item xs={12} sm={6} md={3}>
+          <StatCard 
+            icon="📄" 
+            value={data?.documents?.total || 0} 
+            title="Total Documents" 
+            color="primary" 
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <StatCard 
+            icon="✅" 
+            value={data?.documents?.byStatus?.processed || 0} 
+            title="Processed" 
+            color="success" 
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <StatCard 
+            icon="⏳" 
+            value={data?.documents?.byStatus?.new || 0} 
+            title="Pending" 
+            color="warning" 
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <StatCard 
+            icon="❌" 
+            value={data?.documents?.byStatus?.rejected || 0} 
+            title="Rejected" 
+            color="error" 
+          />
+        </Grid>
+      </Grid>
+      
+      {/* Second row - Documents and Account */}
+      <Grid container spacing={3}>
+        {/* Recent Documents */}
+        <Grid item xs={12} md={8}>
+          <Paper sx={{ p: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Recent Documents
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+            
+            {documentsLoading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+                <CircularProgress />
+              </Box>
+            ) : documents?.length > 0 ? (
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Document Type</TableCell>
+                      <TableCell>Date</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell align="right">Action</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {documents.map((doc) => (
+                      <TableRow key={doc.id}>
+                        <TableCell>{doc.document_type}</TableCell>
+                        <TableCell>{new Date(doc.document_date).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={doc.status}
+                            size="small"
+                            color={
+                              doc.status === 'processed' ? 'success' :
+                              doc.status === 'new' ? 'warning' :
+                              'error'
+                            }
+                          />
+                        </TableCell>
+                        <TableCell align="right">
+                          <Button
+                            component={Link}
+                            to={`/documents/view/${doc.id}`}
+                            size="small"
+                          >
+                            View
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            ) : (
+              <Box sx={{ py: 3, textAlign: 'center' }}>
+                <Typography variant="body1" color="text.secondary" gutterBottom>
+                  You haven't uploaded any documents yet
+                </Typography>
+                <Button
+                  component={Link}
+                  to="/documents/upload"
+                  variant="contained"
+                  sx={{ mt: 1 }}
+                >
+                  Upload Your First Document
+                </Button>
+              </Box>
+            )}
+            
+            {documents?.length > 0 && (
+              <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between' }}>
+                <Button
+                  component={Link}
+                  to="/documents"
+                  size="small"
+                >
+                  View All Documents
+                </Button>
+                
+                <Button
+                  component={Link}
+                  to="/documents/upload"
+                  size="small"
+                  variant="contained"
+                >
+                  Upload Document
+                </Button>
+              </Box>
+            )}
+          </Paper>
+        </Grid>
+        
+        {/* Account Overview and Notifications */}
+        <Grid item xs={12} md={4}>
+          {/* Account Overview */}
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Account Overview
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+            
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Your Accountant
+              </Typography>
+              <Typography variant="body1">
+                Jane Doe
+              </Typography>
+            </Box>
+            
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Account Status
+              </Typography>
+              <Chip
+                label="Active"
+                color="success"
+                size="small"
+              />
+            </Box>
+            
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Last Document Upload
+              </Typography>
+              <Typography variant="body1">
+                {documents && documents.length > 0
+                  ? new Date(documents[0].upload_date).toLocaleDateString()
+                  : 'Never'
+                }
+              </Typography>
+            </Box>
+            
+            <Button
+              component={Link}
+              to="/profile"
+              fullWidth
+              variant="outlined"
+              size="small"
+              sx={{ mt: 1 }}
+            >
+              View Profile
+            </Button>
+          </Paper>
+          
+          {/* Notifications */}
+          <Paper sx={{ p: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Recent Notifications
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+            
+            {notifications?.length > 0 ? (
+              notifications.slice(0, 5).map((notification) => (
+                <Box
+                  key={notification.id}
+                  sx={{
+                    py: 1.5,
+                    borderBottom: '1px solid',
+                    borderColor: 'divider',
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}
+                >
+                  <Box sx={{ mr: 1, fontSize: '1.2rem' }}>🔔</Box>
+                  <Box sx={{ flexGrow: 1 }}>
+                    <Typography variant="body2">
+                      {notification.message}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {new Date(notification.created_at).toLocaleString()}
+                    </Typography>
+                  </Box>
+                </Box>
+              ))
+            ) : (
+              <Typography variant="body2" color="text.secondary" align="center">
+                No new notifications
+              </Typography>
+            )}
+          </Paper>
+        </Grid>
+      </Grid>
+    </Container>
   );
 };
 

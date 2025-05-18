@@ -1,4 +1,4 @@
-import { useState, useContext } from 'react';
+import { useState, useContext, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
   Container, 
@@ -20,15 +20,28 @@ import {
   StepLabel,
   Card,
   CardMedia,
-  IconButton
+  CardContent,
+  IconButton,
+  Avatar,
+  Chip,
+  Divider,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  ListItemAvatar
 } from '@mui/material';
 import { AuthContext } from '../../contexts/AuthContext';
-import documentService from '../../services/document.service';
+import useFetch from '../../hooks/useFetch';
+import axios from 'axios';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 const DocumentUploadPage = () => {
   const { companyId } = useParams();
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
+  const fileInputRef = useRef(null);
   
   // State for stepper
   const [activeStep, setActiveStep] = useState(0);
@@ -42,7 +55,7 @@ const DocumentUploadPage = () => {
   const [documentDetails, setDocumentDetails] = useState({
     documentType: '',
     operationType: '',
-    documentDate: '',
+    documentDate: new Date().toISOString().split('T')[0],
     vendorClient: '',
     amount: '',
     reference: '',
@@ -60,6 +73,13 @@ const DocumentUploadPage = () => {
     error: false,
     message: ''
   });
+  
+  // Fetch company data if companyId is provided
+  const {
+    data: company,
+    loading: companyLoading,
+    error: companyError
+  } = useFetch(companyId ? `${API_URL}/companies/${companyId}` : null);
   
   // Options for dropdowns
   const documentTypes = [
@@ -86,29 +106,35 @@ const DocumentUploadPage = () => {
   // Handle file selection
   const handleFileChange = (e) => {
     const selectedFiles = Array.from(e.target.files);
-    setFiles(selectedFiles);
+    setFiles([...files, ...selectedFiles]);
     
     // Generate previews for selected files
-    const newPreviews = [];
     selectedFiles.forEach(file => {
       // Only generate previews for image files
       if (file.type.startsWith('image/')) {
         const reader = new FileReader();
         reader.onloadend = () => {
-          newPreviews.push({
-            name: file.name,
-            preview: reader.result
-          });
-          setFilesPreviews([...newPreviews]);
+          setFilesPreviews(prev => [
+            ...prev,
+            {
+              file,
+              name: file.name,
+              preview: reader.result
+            }
+          ]);
         };
         reader.readAsDataURL(file);
       } else {
         // For non-image files (like PDFs), use a generic icon/preview
-        newPreviews.push({
-          name: file.name,
-          preview: null
-        });
-        setFilesPreviews([...newPreviews]);
+        setFilesPreviews(prev => [
+          ...prev,
+          {
+            file,
+            name: file.name,
+            preview: null,
+            type: file.type
+          }
+        ]);
       }
     });
   };
@@ -191,46 +217,51 @@ const DocumentUploadPage = () => {
     setUploading(true);
     setUploadProgress(0);
     
-    const formData = new FormData();
-    
-    // Add files to form data
-    files.forEach(file => {
-      formData.append('files', file);
-    });
-    
-    // Add document details to form data
-    formData.append('documentType', documentDetails.documentType);
-    formData.append('operationType', documentDetails.operationType);
-    formData.append('documentDate', documentDetails.documentDate);
-    formData.append('vendorClient', documentDetails.vendorClient);
-    formData.append('amount', documentDetails.amount);
-    formData.append('reference', documentDetails.reference);
-    formData.append('comments', documentDetails.comments);
-    formData.append('companyId', companyId);
-    
     try {
-      // In a real app, this would be an API call
-      // For now, we'll simulate a successful upload
-      // const response = await documentService.uploadDocument(formData, progress => {
-      //   setUploadProgress(progress);
-      // });
-      
-      // Simulate upload progress
-      let progress = 0;
-      const interval = setInterval(() => {
-        progress += 10;
-        setUploadProgress(progress);
+      // Upload each file with the same metadata
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const formData = new FormData();
         
-        if (progress >= 100) {
-          clearInterval(interval);
-          setUploading(false);
-          setUploadStatus({
-            success: true,
-            error: false,
-            message: 'Documents uploaded successfully!'
-          });
-        }
-      }, 300);
+        // Add file to form data
+        formData.append('file', file);
+        
+        // Add document details to form data
+        formData.append('documentType', documentDetails.documentType);
+        formData.append('operationType', documentDetails.operationType);
+        formData.append('documentDate', documentDetails.documentDate);
+        formData.append('vendorClient', documentDetails.vendorClient);
+        formData.append('amount', documentDetails.amount);
+        formData.append('reference', documentDetails.reference);
+        formData.append('comments', documentDetails.comments);
+        formData.append('companyId', companyId || '');
+        
+        // Calculate progress per file
+        const progressPerFile = 100 / files.length;
+        const startProgress = i * progressPerFile;
+        
+        // Upload file
+        await axios.post(`${API_URL}/documents`, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            'x-auth-token': localStorage.getItem('token')
+          },
+          onUploadProgress: (progressEvent) => {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            const totalProgress = startProgress + (percentCompleted * progressPerFile / 100);
+            setUploadProgress(totalProgress);
+          }
+        });
+      }
+      
+      // All files uploaded successfully
+      setUploadStatus({
+        success: true,
+        error: false,
+        message: `${files.length} document${files.length > 1 ? 's' : ''} uploaded successfully!`
+      });
+      setUploading(false);
+      setUploadProgress(100);
       
     } catch (error) {
       console.error('Error uploading documents:', error);
@@ -238,7 +269,7 @@ const DocumentUploadPage = () => {
       setUploadStatus({
         success: false,
         error: true,
-        message: error.message || 'Failed to upload documents. Please try again.'
+        message: error.response?.data?.message || 'Failed to upload documents. Please try again.'
       });
     }
   };
@@ -253,23 +284,30 @@ const DocumentUploadPage = () => {
               Please select the document(s) you want to upload. You can upload multiple files at once.
             </Typography>
             
-            <Button
-              variant="contained"
-              component="label"
-              sx={{ mt: 2 }}
-            >
-              Select Files
-              <input
-                type="file"
-                multiple
-                hidden
-                onChange={handleFileChange}
-                accept=".pdf,.png,.jpg,.jpeg"
-              />
-            </Button>
+            <Box sx={{ textAlign: 'center', my: 3 }}>
+              <Button
+                variant="contained"
+                component="label"
+                size="large"
+                sx={{ py: 1.5, px: 4 }}
+                startIcon="📁"
+              >
+                Select Files
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  hidden
+                  onChange={handleFileChange}
+                  accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx"
+                />
+              </Button>
+            </Box>
             
             {errors.files && (
-              <FormHelperText error>{errors.files}</FormHelperText>
+              <Alert severity="error" sx={{ my: 2 }}>
+                {errors.files}
+              </Alert>
             )}
             
             {filesPreviews.length > 0 && (
@@ -296,10 +334,18 @@ const DocumentUploadPage = () => {
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              bgcolor: 'grey.200'
+                              bgcolor: 'grey.100',
+                              flexDirection: 'column',
+                              gap: 1
                             }}
                           >
-                            <Typography variant="body2" color="text.secondary">
+                            <Avatar sx={{ bgcolor: 'primary.main', width: 50, height: 50 }}>
+                              {file.type?.includes('pdf') ? 'PDF' : 
+                               file.type?.includes('word') ? 'DOC' : 
+                               file.type?.includes('sheet') || file.type?.includes('excel') ? 'XLS' : 
+                               'DOC'}
+                            </Avatar>
+                            <Typography variant="body2" color="text.secondary" sx={{ px: 2, textAlign: 'center', wordBreak: 'break-word' }}>
                               {file.name}
                             </Typography>
                           </Box>
@@ -310,7 +356,11 @@ const DocumentUploadPage = () => {
                             position: 'absolute',
                             top: 5,
                             right: 5,
-                            bgcolor: 'background.paper'
+                            bgcolor: 'background.paper',
+                            '&:hover': {
+                              bgcolor: 'error.light',
+                              color: 'white'
+                            }
                           }}
                           onClick={() => removeFile(index)}
                         >
@@ -334,7 +384,7 @@ const DocumentUploadPage = () => {
             
             <Grid container spacing={3} sx={{ mt: 1 }}>
               <Grid item xs={12} md={6}>
-                <FormControl fullWidth error={!!errors.documentType}>
+                <FormControl fullWidth error={!!errors.documentType} required>
                   <InputLabel id="document-type-label">Document Type</InputLabel>
                   <Select
                     labelId="document-type-label"
@@ -354,7 +404,7 @@ const DocumentUploadPage = () => {
               </Grid>
               
               <Grid item xs={12} md={6}>
-                <FormControl fullWidth error={!!errors.operationType}>
+                <FormControl fullWidth error={!!errors.operationType} required>
                   <InputLabel id="operation-type-label">Operation Type</InputLabel>
                   <Select
                     labelId="operation-type-label"
@@ -376,6 +426,7 @@ const DocumentUploadPage = () => {
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
+                  required
                   name="documentDate"
                   label="Document Date"
                   type="date"
@@ -454,6 +505,25 @@ const DocumentUploadPage = () => {
                   <Typography variant="body1">
                     {files.length} file(s) selected
                   </Typography>
+                  <Box sx={{ mt: 1 }}>
+                    <List dense>
+                      {files.map((file, index) => (
+                        <ListItem key={index}>
+                          <ListItemIcon>
+                            {file.type?.includes('pdf') ? '📄' : 
+                             file.type?.includes('image') ? '🖼️' : 
+                             file.type?.includes('word') ? '📝' : 
+                             file.type?.includes('sheet') || file.type?.includes('excel') ? '📊' : 
+                             '📄'}
+                          </ListItemIcon>
+                          <ListItemText 
+                            primary={file.name}
+                            secondary={`${(file.size / 1024).toFixed(2)} KB`}
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  </Box>
                 </Grid>
                 
                 <Grid item xs={12} md={6}>
@@ -526,14 +596,25 @@ const DocumentUploadPage = () => {
                     </Typography>
                   </Grid>
                 )}
+                
+                {companyId && (
+                  <Grid item xs={12}>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      Uploading for Company
+                    </Typography>
+                    <Typography variant="body1">
+                      {company ? company.name : companyId}
+                    </Typography>
+                  </Grid>
+                )}
               </Grid>
             </Paper>
             
             {uploading && (
               <Box sx={{ mt: 3, textAlign: 'center' }}>
-                <CircularProgress variant="determinate" value={uploadProgress} />
+                <CircularProgress variant="determinate" value={uploadProgress} size={60} />
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                  Uploading... {uploadProgress}%
+                  Uploading... {Math.round(uploadProgress)}%
                 </Typography>
               </Box>
             )}
@@ -559,7 +640,7 @@ const DocumentUploadPage = () => {
   
   // Actions to take after successful upload
   const handleUploadSuccess = () => {
-    navigate(`/documents/${companyId}`);
+    navigate(companyId ? `/documents/${companyId}` : '/documents');
   };
   
   return (
@@ -572,16 +653,16 @@ const DocumentUploadPage = () => {
               Upload Documents
             </Typography>
             <Typography variant="body1" color="text.secondary">
-              Upload and categorize accounting documents for processing
+              {company ? `Upload and categorize documents for ${company.name}` : 'Upload and categorize accounting documents for processing'}
             </Typography>
           </Box>
           
           <Button
             variant="outlined"
             component={Link}
-            to={`/documents/${companyId}`}
+            to={companyId ? `/documents/${companyId}` : '/documents'}
           >
-            Back to Documents
+            Cancel
           </Button>
         </Box>
       </Paper>
