@@ -12,6 +12,9 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
+// Import routes
+const authRoutes = require('./routes/auth');
+
 // Initialize the app
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -62,7 +65,15 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Auth middleware
 const auth = async (req, res, next) => {
-  const token = req.header('x-auth-token');
+  // Try to get token from Authorization header first, then try x-auth-token
+  const authHeader = req.headers.authorization;
+  let token;
+  
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split(' ')[1];
+  } else {
+    token = req.header('x-auth-token');
+  }
   
   if (!token) {
     return res.status(401).json({ message: 'No token, authorization denied' });
@@ -70,7 +81,7 @@ const auth = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_secret_key');
-    req.user = decoded.user;
+    req.user = decoded; // User data is directly in the token payload
     next();
   } catch (err) {
     res.status(401).json({ message: 'Token is not valid' });
@@ -241,10 +252,10 @@ app.post('/api/auth/register', async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
     
-    // Create user
+    // Create user with name field included
     const [result] = await pool.query(
-      'INSERT INTO users (email, password, role) VALUES (?, ?, ?)',
-      [email, hashedPassword, role]
+      'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
+      [name, email, hashedPassword, role]
     );
     
     const userId = result.insertId;
@@ -269,10 +280,9 @@ app.post('/api/auth/register', async (req, res) => {
     
     // Generate token
     const payload = {
-      user: {
-        id: userId,
-        role
-      }
+      id: userId,
+      email: email,
+      role: role
     };
     
     jwt.sign(
@@ -308,12 +318,11 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
     
-    // Generate token
+    // Generate token - store id, email and role directly in the payload
     const payload = {
-      user: {
-        id: user.id,
-        role: user.role
-      }
+      id: user.id,
+      email: user.email,
+      role: user.role
     };
     
     jwt.sign(
@@ -322,7 +331,16 @@ app.post('/api/auth/login', async (req, res) => {
       { expiresIn: '24h' },
       (err, token) => {
         if (err) throw err;
-        res.json({ token });
+        // Include user object in the response
+        res.json({ 
+          token,
+          user: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role
+          }
+        });
       }
     );
   } catch (err) {
@@ -334,7 +352,7 @@ app.post('/api/auth/login', async (req, res) => {
 app.get('/api/auth/me', auth, async (req, res) => {
   try {
     const [users] = await pool.query(
-      'SELECT id, email, role, created_at FROM users WHERE id = ?', 
+      'SELECT id, name, email, role, created_at FROM users WHERE id = ?',
       [req.user.id]
     );
     
@@ -378,6 +396,36 @@ app.get('/api/auth/me', auth, async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+app.get('/api/auth/profile', auth, async (req, res) => {
+  try {
+    const [users] = await pool.query(
+      'SELECT id, name, email, role, created_at FROM users WHERE id = ?',
+      [req.user.id]
+    );
+    
+    if (users.length === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    const user = users[0];
+    
+    res.json({
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (err) {
+    console.error('Error getting user profile:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Routes
+app.use('/api/auth', authRoutes);
 
 // Company routes
 app.get('/api/companies', auth, async (req, res) => {
