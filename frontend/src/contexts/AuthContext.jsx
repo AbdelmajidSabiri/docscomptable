@@ -1,200 +1,160 @@
-import { useState, useEffect, createContext } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
-// Create context with default values
-export const AuthContext = createContext({
-  user: null,
-  loading: true,
-  isAuthenticated: false,
-  login: () => {},
-  logout: () => {},
-  register: () => {},
-  updateProfile: () => {}
-});
+const AuthContext = createContext();
 
-// API URL from environment variables or default to localhost
+// Get API URL from environment or fallback
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+console.log('Using API URL:', API_URL);
 
-// Mock user data for development
-const MOCK_USER = {
-  user: {
-    id: 1,
-    name: 'Demo User',
-    email: 'demo@example.com',
-    role: 'admin'
-  },
-  profile: {
-    id: 1,
-    phone: '123-456-7890',
-    address: '123 Main St'
-  }
-};
-
-// Auth Provider Component
 export const AuthProvider = ({ children }) => {
-  // Initialize with mock user for development
-  const [user, setUser] = useState(MOCK_USER);
-  const [loading, setLoading] = useState(false);
-  
-  // Check for existing auth on component mount
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(localStorage.getItem('token') || '');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
   useEffect(() => {
-    console.log('AuthProvider initialized with mock user');
-    /*
-    const token = localStorage.getItem('token');
-    if (token) {
-      fetchUserProfile(token);
-    } else {
-      setLoading(false);
-    }
-    */
-  }, []);
-  
-  // Fetch user profile with token
-  const fetchUserProfile = async (token) => {
-    try {
-      // Set default auth header
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      
-      // Mock response for demo (replace with actual API call in production)
-      // const response = await axios.get(`${API_URL}/user/profile`);
-      
-      setUser(MOCK_USER);
-      setLoading(false);
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-      logout(); // Token might be invalid
-    }
-  };
-  
-  // Login function
-  const login = async (email, password) => {
-    try {
-      // Mock successful login for demo
-      // const response = await axios.post(`${API_URL}/auth/login`, { email, password });
-      
-      const mockToken = 'mock_jwt_token';
-      const mockUserData = {
-        user: {
-          id: 1,
-          name: email.split('@')[0],
-          email: email,
-          role: 'admin'
-        },
-        profile: {
-          id: 1
+    const verifyToken = async () => {
+      try {
+        if (!token) {
+          setLoading(false);
+          return;
         }
-      };
-      
-      // Store token
-      localStorage.setItem('token', mockToken);
-      
-      // Set auth header
-      axios.defaults.headers.common['Authorization'] = `Bearer ${mockToken}`;
-      
-      // Set user state
-      setUser(mockUserData);
-      
-      return true;
-    } catch (error) {
-      console.error('Login error:', error);
-      return false;
-    }
-  };
-  
-  // Register function
+
+        // Configure request headers
+        const config = {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        };
+
+        console.log('Verifying token and fetching profile...');
+        
+        // Get user profile
+        const response = await axios.get(`${API_URL}/auth/profile`, config);
+        console.log('Profile response:', response.data);
+        
+        if (!response.data.user) {
+          console.error('No user data in profile response');
+          throw new Error('Invalid user profile response');
+        }
+        
+        // Debug JWT token content
+        try {
+          const tokenParts = token.split('.');
+          if (tokenParts.length === 3) {
+            const payload = JSON.parse(atob(tokenParts[1]));
+            console.log('JWT Payload from stored token:', payload);
+            
+            // If user role is missing in response but present in token, use it from token
+            if (!response.data.user.role && payload.role) {
+              response.data.user.role = payload.role;
+              console.log('Using role from token:', payload.role);
+            }
+          }
+        } catch (e) {
+          console.error('Error parsing JWT:', e);
+        }
+        
+        setUser(response.data.user);
+        console.log('User set after profile verification:', response.data.user);
+        setError('');
+      } catch (err) {
+        console.error('Auth verification error:', err);
+        localStorage.removeItem('token');
+        setToken('');
+        setUser(null);
+        setError('Authentication expired. Please login again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    verifyToken();
+  }, [token]);
+
   const register = async (userData) => {
     try {
-      // Mock successful registration
-      // const response = await axios.post(`${API_URL}/auth/register`, userData);
-      
-      const mockToken = 'mock_jwt_token';
-      const mockUserData = {
-        user: {
-          id: 1,
-          name: userData.name,
-          email: userData.email,
-          role: userData.role || 'company'
-        },
-        profile: {
-          id: 1,
-          ...userData
-        }
-      };
-      
-      // Store token
-      localStorage.setItem('token', mockToken);
-      
-      // Set auth header
-      axios.defaults.headers.common['Authorization'] = `Bearer ${mockToken}`;
-      
-      // Set user state
-      setUser(mockUserData);
-      
-      return { success: true };
-    } catch (error) {
-      console.error('Registration error:', error);
-      return { 
-        success: false, 
-        message: error.response?.data?.message || 'Registration failed'
-      };
+      setError('');
+      const response = await axios.post(`${API_URL}/auth/register`, userData);
+      return response.data;
+    } catch (err) {
+      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+      throw err;
     }
   };
-  
-  // Logout function
+
+  const login = async (credentials) => {
+    try {
+      setError('');
+      console.log('Login credentials:', { email: credentials.email }); // Don't log password
+      
+      // Extract email and password directly to ensure correct format for API
+      const { email, password } = credentials;
+      
+      console.log('Making API request to:', `${API_URL}/auth/login`);
+      const response = await axios.post(`${API_URL}/auth/login`, { email, password });
+      console.log('API Response:', response.data);
+      
+      const { token: authToken, user: userData } = response.data;
+      
+      if (!authToken) {
+        console.error('No token received in response');
+        throw new Error('Authentication failed - no token received');
+      }
+
+      // Debug JWT token content
+      try {
+        const tokenParts = authToken.split('.');
+        if (tokenParts.length === 3) {
+          const payload = JSON.parse(atob(tokenParts[1]));
+          console.log('JWT Payload:', payload);
+        }
+      } catch (e) {
+        console.error('Error parsing JWT:', e);
+      }
+      
+      localStorage.setItem('token', authToken);
+      setToken(authToken);
+
+      // Make sure we're setting user data correctly
+      console.log('Setting user data:', userData);
+      setUser(userData);
+      
+      return userData;
+    } catch (err) {
+      console.error('Login error details:', err);
+      setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
+      throw err;
+    }
+  };
+
   const logout = () => {
-    // Remove token
     localStorage.removeItem('token');
-    
-    // Remove auth header
-    delete axios.defaults.headers.common['Authorization'];
-    
-    // Clear user data
+    setToken('');
     setUser(null);
   };
-  
-  // Update profile function
-  const updateProfile = async (profileData) => {
-    try {
-      // Mock successful profile update
-      // const response = await axios.put(`${API_URL}/user/profile`, profileData);
-      
-      // Update user state with new profile data
-      setUser(prev => ({
-        ...prev,
-        user: {
-          ...prev.user,
-          name: profileData.name
-        },
-        profile: {
-          ...prev.profile,
-          ...profileData
-        }
-      }));
-      
-      return { success: true };
-    } catch (error) {
-      console.error('Profile update error:', error);
-      return { 
-        success: false, 
-        message: error.response?.data?.message || 'Profile update failed'
-      };
-    }
+
+  const isAuthenticated = !!token;
+  const isAdmin = user?.role === 'admin';
+  const isAccountant = user?.role === 'accountant';
+
+  const value = {
+    user,
+    token,
+    isAuthenticated,
+    isAdmin,
+    isAccountant,
+    loading,
+    error,
+    register,
+    login,
+    logout
   };
-  
-  // Return provider with context value
-  return (
-    <AuthContext.Provider value={{ 
-      user, 
-      loading, 
-      login, 
-      register, 
-      logout,
-      updateProfile,
-      isAuthenticated: !!user
-    }}>
-      {children}
-    </AuthContext.Provider>
-  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
+
+export const useAuth = () => useContext(AuthContext);
 
 export default AuthContext;
