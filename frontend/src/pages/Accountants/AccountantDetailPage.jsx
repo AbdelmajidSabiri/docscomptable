@@ -27,6 +27,7 @@ import {
 } from '@mui/material';
 import { AuthContext } from '../../contexts/AuthContext';
 import useFetch from '../../hooks/useFetch';
+import Sidebar from '../../components/Sidebar';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -155,322 +156,327 @@ const AccountantDetailPage = () => {
   }
   
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      {/* Header */}
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Box>
-            <Typography variant="h4" component="h1" gutterBottom>
-              {accountant.name}
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography variant="body1" color="text.secondary">
-                {accountant.email}
-              </Typography>
-              <Chip
-                label={accountant.status}
-                size="small"
-                color={accountant.status === 'active' ? 'success' : 'error'}
-              />
-            </Box>
-          </Box>
-          
-          <Box>
-            <Button
-              variant="outlined"
-              component={Link}
-              to="/accountants"
-              sx={{ mr: 2 }}
-            >
-              Back to Accountants
-            </Button>
-            
-            {user.user.role === 'admin' && (
-              <Button
-                variant="contained"
-                component={Link}
-                to={`/accountants/edit/${id}`}
-              >
-                Edit Accountant
-              </Button>
-            )}
-          </Box>
-        </Box>
-      </Paper>
-      
-      <Grid container spacing={3}>
-        {/* Main Content */}
-        <Grid item xs={12} md={8}>
-          {/* Accountant Details */}
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'white', fontFamily: 'Inter, sans-serif' }}>
+      <Sidebar />
+      <Box sx={{ flex: 1, ml: 0, bgcolor: '#f6f7ed', p: 4 }}>
+        <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+          {/* Header */}
           <Paper sx={{ p: 3, mb: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Accountant Details
-            </Typography>
-            <Divider sx={{ mb: 2 }} />
-            
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Full Name
-                </Typography>
-                <Typography variant="body1" sx={{ mb: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Box>
+                <Typography variant="h4" component="h1" gutterBottom>
                   {accountant.name}
                 </Typography>
-                
-                <Typography variant="subtitle2" color="text.secondary">
-                  Email Address
-                </Typography>
-                <Typography variant="body1" sx={{ mb: 2 }}>
-                  {accountant.email}
-                </Typography>
-              </Grid>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="body1" color="text.secondary">
+                    {accountant.email}
+                  </Typography>
+                  <Chip
+                    label={accountant.status}
+                    size="small"
+                    color={accountant.status === 'active' ? 'success' : 'error'}
+                  />
+                </Box>
+              </Box>
               
-              <Grid item xs={12} md={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Phone Number
-                </Typography>
-                <Typography variant="body1" sx={{ mb: 2 }}>
-                  {accountant.phone || 'N/A'}
-                </Typography>
+              <Box>
+                <Button
+                  variant="outlined"
+                  component={Link}
+                  to="/accountants"
+                  sx={{ mr: 2 }}
+                >
+                  Back to Accountants
+                </Button>
                 
-                <Typography variant="subtitle2" color="text.secondary">
-                  Registration Date
-                </Typography>
-                <Typography variant="body1" sx={{ mb: 2 }}>
-                  {accountant.created_at ? new Date(accountant.created_at).toLocaleDateString() : 'N/A'}
-                </Typography>
-              </Grid>
-            </Grid>
-          </Paper>
-          
-          {/* Managed Companies */}
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Managed Companies
-            </Typography>
-            <Divider sx={{ mb: 2 }} />
-            
-            {companiesLoading ? (
-              <LinearProgress />
-            ) : companiesError ? (
-              <Alert severity="error">
-                Error loading companies data
-              </Alert>
-            ) : companies && companies.length > 0 ? (
-              <TableContainer>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Company Name</TableCell>
-                      <TableCell>Tax ID</TableCell>
-                      <TableCell>Status</TableCell>
-                      <TableCell align="right">Actions</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {companies.map((company) => (
-                      <TableRow key={company.id}>
-                        <TableCell>{company.name}</TableCell>
-                        <TableCell>{company.taxId}</TableCell>
-                        <TableCell>
-                          <Chip
-                            label={company.status}
-                            size="small"
-                            color={
-                              company.status === 'active' ? 'success' :
-                              company.status === 'pending' ? 'warning' :
-                              'error'
-                            }
-                          />
-                        </TableCell>
-                        <TableCell align="right">
-                          <Button
-                            size="small"
-                            component={Link}
-                            to={`/companies/${company.id}`}
-                          >
-                            View
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            ) : (
-              <Box sx={{ textAlign: 'center', py: 4 }}>
-                <Typography variant="body1" color="text.secondary">
-                  This accountant has no companies assigned.
-                </Typography>
                 {user.user.role === 'admin' && (
                   <Button
-                    component={Link}
-                    to="/companies/new"
                     variant="contained"
-                    sx={{ mt: 2 }}
-                  >
-                    Assign Company
-                  </Button>
-                )}
-              </Box>
-            )}
-          </Paper>
-        </Grid>
-        
-        {/* Sidebar */}
-        <Grid item xs={12} md={4}>
-          {/* Quick Stats */}
-          <Paper sx={{ p: 3, mb: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Stats
-            </Typography>
-            <Divider sx={{ mb: 2 }} />
-            
-            <Grid container spacing={2}>
-              <Grid item xs={6}>
-                <Card variant="outlined">
-                  <CardContent sx={{ textAlign: 'center' }}>
-                    <Typography variant="h4">
-                      {companies?.length || 0}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Companies
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-              
-              <Grid item xs={6}>
-                <Card variant="outlined">
-                  <CardContent sx={{ textAlign: 'center' }}>
-                    <Typography variant="h4">
-                      {/* Total document count would come from API */}
-                      128
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Documents
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-              
-              <Grid item xs={6}>
-                <Card variant="outlined">
-                  <CardContent sx={{ textAlign: 'center' }}>
-                    <Typography variant="h4">
-                      {/* Active count would come from API */}
-                      98
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Processed
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-              
-              <Grid item xs={6}>
-                <Card variant="outlined">
-                  <CardContent sx={{ textAlign: 'center' }}>
-                    <Typography variant="h4">
-                      {/* Pending count would come from API */}
-                      30
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Pending
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-            </Grid>
-          </Paper>
-          
-          {/* Actions */}
-          {user.user.role === 'admin' && (
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Actions
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
-              
-              <Grid container spacing={2}>
-                <Grid item xs={12}>
-                  <Button
-                    fullWidth
-                    variant="outlined"
                     component={Link}
                     to={`/accountants/edit/${id}`}
                   >
-                    Edit Profile
+                    Edit Accountant
                   </Button>
-                </Grid>
+                )}
+              </Box>
+            </Box>
+          </Paper>
+          
+          <Grid container spacing={3}>
+            {/* Main Content */}
+            <Grid item xs={12} md={8}>
+              {/* Accountant Details */}
+              <Paper sx={{ p: 3, mb: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  Accountant Details
+                </Typography>
+                <Divider sx={{ mb: 2 }} />
                 
-                <Grid item xs={12}>
-                  <Button
-                    fullWidth
-                    variant="outlined"
-                    component={Link}
-                    to={`/companies/new?accountant=${id}`}
-                  >
-                    Add Company
-                  </Button>
+                <Grid container spacing={3}>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      Full Name
+                    </Typography>
+                    <Typography variant="body1" sx={{ mb: 2 }}>
+                      {accountant.name}
+                    </Typography>
+                    
+                    <Typography variant="subtitle2" color="text.secondary">
+                      Email Address
+                    </Typography>
+                    <Typography variant="body1" sx={{ mb: 2 }}>
+                      {accountant.email}
+                    </Typography>
+                  </Grid>
+                  
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      Phone Number
+                    </Typography>
+                    <Typography variant="body1" sx={{ mb: 2 }}>
+                      {accountant.phone || 'N/A'}
+                    </Typography>
+                    
+                    <Typography variant="subtitle2" color="text.secondary">
+                      Registration Date
+                    </Typography>
+                    <Typography variant="body1" sx={{ mb: 2 }}>
+                      {accountant.created_at ? new Date(accountant.created_at).toLocaleDateString() : 'N/A'}
+                    </Typography>
+                  </Grid>
                 </Grid>
+              </Paper>
+              
+              {/* Managed Companies */}
+              <Paper sx={{ p: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  Managed Companies
+                </Typography>
+                <Divider sx={{ mb: 2 }} />
                 
-                <Grid item xs={12}>
-                  <Button
-                    fullWidth
-                    variant="outlined"
-                    color={accountant.status === 'active' ? 'error' : 'success'}
-                    onClick={handleDeactivate}
-                  >
-                    {accountant.status === 'active' ? 'Deactivate Account' : 'Activate Account'}
-                  </Button>
-                </Grid>
+                {companiesLoading ? (
+                  <LinearProgress />
+                ) : companiesError ? (
+                  <Alert severity="error">
+                    Error loading companies data
+                  </Alert>
+                ) : companies && companies.length > 0 ? (
+                  <TableContainer>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Company Name</TableCell>
+                          <TableCell>Tax ID</TableCell>
+                          <TableCell>Status</TableCell>
+                          <TableCell align="right">Actions</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {companies.map((company) => (
+                          <TableRow key={company.id}>
+                            <TableCell>{company.name}</TableCell>
+                            <TableCell>{company.taxId}</TableCell>
+                            <TableCell>
+                              <Chip
+                                label={company.status}
+                                size="small"
+                                color={
+                                  company.status === 'active' ? 'success' :
+                                  company.status === 'pending' ? 'warning' :
+                                  'error'
+                                }
+                              />
+                            </TableCell>
+                            <TableCell align="right">
+                              <Button
+                                size="small"
+                                component={Link}
+                                to={`/companies/${company.id}`}
+                              >
+                                View
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                ) : (
+                  <Box sx={{ textAlign: 'center', py: 4 }}>
+                    <Typography variant="body1" color="text.secondary">
+                      This accountant has no companies assigned.
+                    </Typography>
+                    {user.user.role === 'admin' && (
+                      <Button
+                        component={Link}
+                        to="/companies/new"
+                        variant="contained"
+                        sx={{ mt: 2 }}
+                      >
+                        Assign Company
+                      </Button>
+                    )}
+                  </Box>
+                )}
+              </Paper>
+            </Grid>
+            
+            {/* Sidebar */}
+            <Grid item xs={12} md={4}>
+              {/* Quick Stats */}
+              <Paper sx={{ p: 3, mb: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  Stats
+                </Typography>
+                <Divider sx={{ mb: 2 }} />
                 
-                <Grid item xs={12}>
-                  <Button
-                    fullWidth
-                    variant="outlined"
-                    color="error"
-                    onClick={handleDelete}
-                  >
-                    Delete Account
-                  </Button>
+                <Grid container spacing={2}>
+                  <Grid item xs={6}>
+                    <Card variant="outlined">
+                      <CardContent sx={{ textAlign: 'center' }}>
+                        <Typography variant="h4">
+                          {companies?.length || 0}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Companies
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                  
+                  <Grid item xs={6}>
+                    <Card variant="outlined">
+                      <CardContent sx={{ textAlign: 'center' }}>
+                        <Typography variant="h4">
+                          {/* Total document count would come from API */}
+                          128
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Documents
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                  
+                  <Grid item xs={6}>
+                    <Card variant="outlined">
+                      <CardContent sx={{ textAlign: 'center' }}>
+                        <Typography variant="h4">
+                          {/* Active count would come from API */}
+                          98
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Processed
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                  
+                  <Grid item xs={6}>
+                    <Card variant="outlined">
+                      <CardContent sx={{ textAlign: 'center' }}>
+                        <Typography variant="h4">
+                          {/* Pending count would come from API */}
+                          30
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Pending
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
                 </Grid>
-              </Grid>
-            </Paper>
-          )}
-        </Grid>
-      </Grid>
-      
-      {/* Confirmation Dialog */}
-      <Dialog
-        open={confirmDialog.open}
-        onClose={handleCloseDialog}
-        aria-labelledby="alert-dialog-title"
-        aria-describedby="alert-dialog-description"
-      >
-        <DialogTitle id="alert-dialog-title">
-          {confirmDialog.title}
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText id="alert-dialog-description">
-            {confirmDialog.content}
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog} color="primary">
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleConfirmAction} 
-            color="error" 
-            autoFocus
+              </Paper>
+              
+              {/* Actions */}
+              {user.user.role === 'admin' && (
+                <Paper sx={{ p: 3 }}>
+                  <Typography variant="h6" gutterBottom>
+                    Actions
+                  </Typography>
+                  <Divider sx={{ mb: 2 }} />
+                  
+                  <Grid container spacing={2}>
+                    <Grid item xs={12}>
+                      <Button
+                        fullWidth
+                        variant="outlined"
+                        component={Link}
+                        to={`/accountants/edit/${id}`}
+                      >
+                        Edit Profile
+                      </Button>
+                    </Grid>
+                    
+                    <Grid item xs={12}>
+                      <Button
+                        fullWidth
+                        variant="outlined"
+                        component={Link}
+                        to={`/companies/new?accountant=${id}`}
+                      >
+                        Add Company
+                      </Button>
+                    </Grid>
+                    
+                    <Grid item xs={12}>
+                      <Button
+                        fullWidth
+                        variant="outlined"
+                        color={accountant.status === 'active' ? 'error' : 'success'}
+                        onClick={handleDeactivate}
+                      >
+                        {accountant.status === 'active' ? 'Deactivate Account' : 'Activate Account'}
+                      </Button>
+                    </Grid>
+                    
+                    <Grid item xs={12}>
+                      <Button
+                        fullWidth
+                        variant="outlined"
+                        color="error"
+                        onClick={handleDelete}
+                      >
+                        Delete Account
+                      </Button>
+                    </Grid>
+                  </Grid>
+                </Paper>
+              )}
+            </Grid>
+          </Grid>
+          
+          {/* Confirmation Dialog */}
+          <Dialog
+            open={confirmDialog.open}
+            onClose={handleCloseDialog}
+            aria-labelledby="alert-dialog-title"
+            aria-describedby="alert-dialog-description"
           >
-            Confirm
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Container>
+            <DialogTitle id="alert-dialog-title">
+              {confirmDialog.title}
+            </DialogTitle>
+            <DialogContent>
+              <DialogContentText id="alert-dialog-description">
+                {confirmDialog.content}
+              </DialogContentText>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={handleCloseDialog} color="primary">
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleConfirmAction} 
+                color="error" 
+                autoFocus
+              >
+                Confirm
+              </Button>
+            </DialogActions>
+          </Dialog>
+        </Container>
+      </Box>
+    </Box>
   );
 };
 

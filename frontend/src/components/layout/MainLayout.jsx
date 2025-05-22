@@ -1,33 +1,37 @@
-import { useContext } from 'react';
-import { Box } from '@mui/material';
-import { Outlet } from 'react-router-dom';
-import Sidebar from '../navigation/Sidebar';
-import Header from '../navigation/Header';
-import { AuthContext } from '../../contexts/AuthContext';
-import '../../styles/layout/MainLayout.css';
+import { useState } from 'react';
+import Sidebar from '../components/Sidebar';
+import ComptableDashboard from './ComptableDashboard';
+import ClientDetailModal from '../components/ClientDetailModal';
+import './MainLayout.css';
 
 const MainLayout = () => {
-  const { user, loading } = useContext(AuthContext);
+  const [selectedClient, setSelectedClient] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
   
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-      </div>
-    );
-  }
+  const handleClientSelect = (client) => {
+    setSelectedClient(client);
+    setModalOpen(true);
+  };
+  
+  const handleCloseModal = () => {
+    setModalOpen(false);
+  };
   
   return (
     <div className="main-layout">
-      {user && <Sidebar />}
+      <Sidebar />
       
       <div className="main-content">
-        {user && <Header />}
-        
-        <div className="page-container">
-          <Outlet />
-        </div>
+        <ComptableDashboard onClientSelect={handleClientSelect} />
       </div>
+      
+      {modalOpen && selectedClient && (
+        <ClientDetailModal 
+          client={selectedClient} 
+          open={modalOpen} 
+          onClose={handleCloseModal} 
+        />
+      )}
     </div>
   );
 };

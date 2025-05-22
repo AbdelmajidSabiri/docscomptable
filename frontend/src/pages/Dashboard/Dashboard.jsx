@@ -24,6 +24,7 @@ import { AuthContext } from '../../contexts/AuthContext';
 import useFetch from '../../hooks/useFetch';
 import StatCard from '../../components/common/StatCard';
 import ActivityItem from '../../components/common/ActivityItem';
+import Sidebar from '../../components/Sidebar';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -97,6 +98,16 @@ const Dashboard = () => {
       documentsLoading={documentsLoading}
     />;
   }
+
+  return (
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'white', fontFamily: 'Inter, sans-serif' }}>
+      <Sidebar />
+      <Box sx={{ flex: 1, ml: 0, bgcolor: '#f6f7ed', p: 4 }}>
+        {/* Main content goes here, copy everything that was to the right of the sidebar */}
+        {/* ...rest of Dashboard content... */}
+      </Box>
+    </Box>
+  );
 };
 
 const AdminDashboard = ({ data, notifications }) => {

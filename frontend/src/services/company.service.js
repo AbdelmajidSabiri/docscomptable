@@ -2,10 +2,17 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
+function authHeader() {
+  const token = localStorage.getItem('token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 export const companyService = {
   getAll: async () => {
     try {
-      const response = await axios.get(`${API_URL}/companies`);
+      const response = await axios.get(`${API_URL}/companies`, {
+        headers: authHeader()
+      });
       return response.data;
     } catch (error) {
       console.error('Error fetching companies:', error);
@@ -15,7 +22,9 @@ export const companyService = {
   
   getById: async (id) => {
     try {
-      const response = await axios.get(`${API_URL}/companies/${id}`);
+      const response = await axios.get(`${API_URL}/companies/${id}`, {
+        headers: authHeader()
+      });
       return response.data;
     } catch (error) {
       console.error(`Error fetching company ${id}:`, error);
@@ -25,7 +34,9 @@ export const companyService = {
   
   create: async (companyData) => {
     try {
-      const response = await axios.post(`${API_URL}/companies`, companyData);
+      const response = await axios.post(`${API_URL}/companies`, companyData, {
+        headers: authHeader()
+      });
       return response.data;
     } catch (error) {
       console.error('Error creating company:', error);
@@ -35,7 +46,9 @@ export const companyService = {
   
   update: async (id, companyData) => {
     try {
-      const response = await axios.put(`${API_URL}/companies/${id}`, companyData);
+      const response = await axios.put(`${API_URL}/companies/${id}`, companyData, {
+        headers: authHeader()
+      });
       return response.data;
     } catch (error) {
       console.error(`Error updating company ${id}:`, error);
@@ -45,7 +58,9 @@ export const companyService = {
   
   delete: async (id) => {
     try {
-      const response = await axios.delete(`${API_URL}/companies/${id}`);
+      const response = await axios.delete(`${API_URL}/companies/${id}`, {
+        headers: authHeader()
+      });
       return response.data;
     } catch (error) {
       console.error(`Error deleting company ${id}:`, error);
