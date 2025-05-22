@@ -776,7 +776,7 @@ app.get('/api/documents/company/:companyId', auth, async (req, res) => {
     let query = `
       SELECT 
         id, company_id, file_name, file_path, file_mime, operation_type, 
-        document_type, document_date, vendor_client, amount, reference, status, 
+        document_type, document_date, vendor_client, status, 
         comments, upload_date, processing_date 
       FROM documents 
       WHERE company_id = ?`;
@@ -801,7 +801,6 @@ app.get('/api/documents/company/:companyId', auth, async (req, res) => {
     query += ' ORDER BY upload_date DESC';
     
     const [documents] = await pool.query(query, params);
-    
     res.json(documents);
   } catch (err) {
     console.error(err);
