@@ -1,4 +1,4 @@
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Container, 
@@ -24,22 +24,30 @@ import {
 } from '@mui/material';
 import { AuthContext } from '../../contexts/AuthContext';
 import Sidebar from '../../components/Sidebar';
+import axios from 'axios';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 const ProfilePage = () => {
-  const { user, updateProfile } = useContext(AuthContext);
+  const { user, token, updateProfile } = useContext(AuthContext);
   const navigate = useNavigate();
   
   // State for tab selection
   const [tabValue, setTabValue] = useState(0);
   
+  // State for profile data
+  const [profileData, setProfileData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  
   // State for form data
   const [formData, setFormData] = useState({
-    name: user?.user?.name || '',
-    email: user?.user?.email || '',
-    phone: user?.profile?.phone || '',
-    address: user?.profile?.address || '',
-    company: user?.user?.role === 'company' ? user?.profile?.companyName || '' : '',
-    taxId: user?.user?.role === 'company' ? user?.profile?.taxId || '' : ''
+    name: '',
+    email: '',
+    phone: '',
+    address: '',
+    company: '',
+    taxId: ''
   });
   
   // State for password change
@@ -50,12 +58,76 @@ const ProfilePage = () => {
   });
   
   // State for form submission
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [error, setError] = useState('');
   
   // State for delete account dialog
   const [deleteDialog, setDeleteDialog] = useState(false);
+
+  // Fetch user profile and accountant details
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        setLoading(true);
+        setError('');
+        
+        const config = {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        };
+
+        // First get the user profile
+        const profileResponse = await axios.get(`${API_URL}/auth/profile`, config);
+        const userProfile = profileResponse.data;
+        
+        if (userProfile.user.role === 'accountant' && userProfile.profile) {
+          // If user is an accountant, get their accountant details
+          const accountantResponse = await axios.get(
+            `${API_URL}/accountants/${userProfile.profile.id}`,
+            config
+          );
+          
+          setProfileData({
+            user: userProfile.user,
+            profile: accountantResponse.data.accountant
+          });
+          
+          // Update form data with accountant details
+          setFormData({
+            name: userProfile.user.name || '',
+            email: userProfile.user.email || '',
+            phone: accountantResponse.data.accountant.phone || '',
+            address: accountantResponse.data.accountant.address || '',
+            company: '',
+            taxId: ''
+          });
+        } else {
+          // For other roles, just use the profile data
+          setProfileData(userProfile);
+          
+          // Update form data with profile details
+          setFormData({
+            name: userProfile.user.name || '',
+            email: userProfile.user.email || '',
+            phone: userProfile.profile?.phone || '',
+            address: userProfile.profile?.address || '',
+            company: userProfile.user.role === 'company' ? userProfile.profile?.companyName || '' : '',
+            taxId: userProfile.user.role === 'company' ? userProfile.profile?.taxId || '' : ''
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching profile:', err);
+        setError(err.response?.data?.message || 'Failed to load profile');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (token) {
+      fetchProfile();
+    }
+  }, [token]);
   
   // Handle tab change
   const handleTabChange = (event, newValue) => {
@@ -83,22 +155,42 @@ const ProfilePage = () => {
   // Handle profile update submission
   const handleProfileUpdate = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    setSubmitting(true);
     setError('');
     setSuccess(false);
     
     try {
-      // In a real app, this would be an API call
-      // const response = await updateProfile(formData);
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      };
+
+      if (user.role === 'accountant') {
+        // Update accountant profile
+        await axios.put(
+          `${API_URL}/accountants/${profileData.profile.id}`,
+          {
+            name: formData.name,
+            phone: formData.phone,
+            address: formData.address
+          },
+          config
+        );
+      } else {
+        // Update user profile
+        await axios.put(
+          `${API_URL}/auth/profile`,
+          formData,
+          config
+        );
+      }
       
-      // Simulate API call
-      setTimeout(() => {
-        setLoading(false);
-        setSuccess(true);
-      }, 1000);
+      setSuccess(true);
     } catch (err) {
-      setError(err.message || 'Failed to update profile');
-      setLoading(false);
+      setError(err.response?.data?.message || 'Failed to update profile');
+    } finally {
+      setSubmitting(false);
     }
   };
   
@@ -112,27 +204,36 @@ const ProfilePage = () => {
       return;
     }
     
-    setLoading(true);
+    setSubmitting(true);
     setError('');
     setSuccess(false);
     
     try {
-      // In a real app, this would be an API call
-      // await api.auth.changePassword(passwordData);
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      };
+
+      await axios.put(
+        `${API_URL}/auth/change-password`,
+        {
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword
+        },
+        config
+      );
       
-      // Simulate API call
-      setTimeout(() => {
-        setLoading(false);
-        setSuccess(true);
-        setPasswordData({
-          currentPassword: '',
-          newPassword: '',
-          confirmPassword: ''
-        });
-      }, 1000);
+      setSuccess(true);
+      setPasswordData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
     } catch (err) {
-      setError(err.message || 'Failed to change password');
-      setLoading(false);
+      setError(err.response?.data?.message || 'Failed to change password');
+    } finally {
+      setSubmitting(false);
     }
   };
   
@@ -143,22 +244,21 @@ const ProfilePage = () => {
   
   // Handle confirm delete account
   const confirmDeleteAccount = async () => {
-    setLoading(true);
+    setSubmitting(true);
     
     try {
-      // In a real app, this would be an API call
-      // await api.auth.deleteAccount();
-      
-      // Simulate API call
-      setTimeout(() => {
-        setLoading(false);
-        setDeleteDialog(false);
-        // In real app, would call logout function
-        navigate('/login');
-      }, 1000);
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      };
+
+      await axios.delete(`${API_URL}/auth/account`, config);
+      setDeleteDialog(false);
+      navigate('/login');
     } catch (err) {
-      setError(err.message || 'Failed to delete account');
-      setLoading(false);
+      setError(err.response?.data?.message || 'Failed to delete account');
+      setSubmitting(false);
       setDeleteDialog(false);
     }
   };
@@ -177,6 +277,14 @@ const ProfilePage = () => {
       </Container>
     );
   }
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
   
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'white', fontFamily: 'Inter, sans-serif' }}>
@@ -187,7 +295,7 @@ const ProfilePage = () => {
           <Paper sx={{ p: 3, mb: 3 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
               <Avatar sx={{ width: 80, height: 80, bgcolor: 'primary.main', fontSize: '2rem' }}>
-                {user.user.name.charAt(0)}
+                {profileData?.user?.name?.charAt(0) || '?'}
               </Avatar>
               <Box>
                 <Typography variant="h4" component="h1" gutterBottom>
@@ -315,9 +423,9 @@ const ProfilePage = () => {
                             <Button
                               type="submit"
                               variant="contained"
-                              disabled={loading}
+                              disabled={submitting}
                             >
-                              {loading ? <CircularProgress size={24} /> : 'Update Profile'}
+                              {submitting ? <CircularProgress size={24} /> : 'Update Profile'}
                             </Button>
                           </Box>
                         </Grid>
@@ -446,9 +554,9 @@ const ProfilePage = () => {
                             <Button
                               type="submit"
                               variant="contained"
-                              disabled={loading}
+                              disabled={submitting}
                             >
-                              {loading ? <CircularProgress size={24} /> : 'Change Password'}
+                              {submitting ? <CircularProgress size={24} /> : 'Change Password'}
                             </Button>
                           </Box>
                         </Grid>
@@ -714,7 +822,7 @@ const ProfilePage = () => {
                 Cancel
               </Button>
               <Button onClick={confirmDeleteAccount} color="error" autoFocus>
-                {loading ? <CircularProgress size={24} /> : 'Delete Permanently'}
+                {submitting ? <CircularProgress size={24} /> : 'Delete Permanently'}
               </Button>
             </DialogActions>
           </Dialog>

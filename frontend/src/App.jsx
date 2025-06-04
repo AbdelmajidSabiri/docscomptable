@@ -15,6 +15,9 @@ import DocumentsPage from './pages/DocumentsPage';
 import NotFound from './pages/NotFound';
 import TestLogin from './pages/TestLogin';
 import CompaniesPage from './pages/Companies/CompaniesPage';
+import CompanyProfilePage from './pages/Companies/CompanyProfilePage';
+import SettingsPage from './pages/Settings/SettingsPage';
+import AccountantProfilePage from './pages/Accountants/AccountantProfilePage';
 
 // Import global styles
 import './styles/index.css';
@@ -42,6 +45,7 @@ function App() {
             <Route path="/accountant/dashboard" element={<AccountantDashboard />} />
             <Route path="/accountant/documents" element={<DocumentsPage />} />
             <Route path="/accountant/companies" element={<CompaniesPage />} />
+            <Route path="/accountant/settings" element={<SettingsPage />} />
           </Route>
           
           {/* Protected user routes */}
@@ -55,6 +59,12 @@ function App() {
           
           {/* Default dashboard route - redirects based on user role */}
           <Route path="/dashboard" element={<DashboardRedirect />} />
+          
+          {/* Company profile route */}
+          <Route path="/companies/:id" element={<CompanyProfilePage />} />
+          
+          {/* Accountant profile route */}
+          <Route path="/accountants/:id" element={<AccountantProfilePage />} />
           
           {/* 404 Page */}
           <Route path="*" element={<NotFound />} />

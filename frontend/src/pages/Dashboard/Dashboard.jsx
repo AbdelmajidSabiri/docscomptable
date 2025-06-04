@@ -103,8 +103,7 @@ const Dashboard = () => {
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'white', fontFamily: 'Inter, sans-serif' }}>
       <Sidebar />
       <Box sx={{ flex: 1, ml: 0, bgcolor: '#f6f7ed', p: 4 }}>
-        {/* Main content goes here, copy everything that was to the right of the sidebar */}
-        {/* ...rest of Dashboard content... */}
+        {/* Main content here */}
       </Box>
     </Box>
   );

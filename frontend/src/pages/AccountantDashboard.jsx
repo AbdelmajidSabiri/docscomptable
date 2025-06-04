@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { 
   Box, 
   Typography, 
@@ -39,7 +40,7 @@ import {
   Avatar,
   Badge
 } from '@mui/material';
-import { Link as RouterLink, NavLink } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
 
 import {
   DescriptionOutlined,
@@ -60,14 +61,24 @@ import {
   Comment,
   LocationOn,
   Email,
+  Notifications,
+  Sort,
+  AddBusiness,
+  CheckCircle,
+  Close,
+  Done,
+  Warning,
+  Info
 } from '@mui/icons-material';
 
 import axios from 'axios';
+import Sidebar from '../components/Sidebar';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 const AccountantDashboard = () => {
   const { user, logout, token } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [documents, setDocuments] = useState([]);
   const [recentActivity, setRecentActivity] = useState([]);
@@ -81,6 +92,13 @@ const AccountantDashboard = () => {
   });
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [sortBy, setSortBy] = useState('date');
+  const [sortOrder, setSortOrder] = useState('desc');
+  const [showFilters, setShowFilters] = useState(false);
+  const [showSort, setShowSort] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showAddCompany, setShowAddCompany] = useState(false);
   const [dateRange, setDateRange] = useState({
     start: new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split('T')[0],
     end: new Date().toISOString().split('T')[0]
@@ -317,6 +335,178 @@ const AccountantDashboard = () => {
     documents: filteredDocuments.filter(doc => group.match.includes(doc.status)),
   }));
 
+  // Sort documents
+  const sortedDocuments = [...filteredDocuments].sort((a, b) => {
+    const aValue = a[sortBy] || '';
+    const bValue = b[sortBy] || '';
+    
+    if (sortBy === 'document_date' || sortBy === 'upload_date') {
+      const dateA = aValue ? new Date(aValue) : new Date(0);
+      const dateB = bValue ? new Date(bValue) : new Date(0);
+      return sortOrder === 'desc' 
+        ? dateB - dateA
+        : dateA - dateB;
+    }
+    
+    if (sortBy === 'amount') {
+      const amountA = parseFloat(aValue) || 0;
+      const amountB = parseFloat(bValue) || 0;
+      return sortOrder === 'desc'
+        ? amountB - amountA
+        : amountA - amountB;
+    }
+    
+    // For string values (like vendor_client)
+    const strA = String(aValue).toLowerCase();
+    const strB = String(bValue).toLowerCase();
+    return sortOrder === 'desc'
+      ? strB.localeCompare(strA)
+      : strA.localeCompare(strB);
+  });
+
+  // Handle sort change
+  const handleSortChange = (newSortBy) => {
+    if (sortBy === newSortBy) {
+      setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc');
+    } else {
+      setSortBy(newSortBy);
+      setSortOrder('desc');
+    }
+    setShowSort(false);
+  };
+
+  // Handle filter change
+  const handleFilterChange = (newFilter) => {
+    setFilterStatus(newFilter);
+    setShowFilters(false);
+  };
+
+  // Handle add company
+  const handleAddCompany = () => {
+    setShowAddCompany(true);
+  };
+
+  // Handle notifications
+  const handleNotifications = () => {
+    setShowNotifications(!showNotifications);
+  };
+
+  // Handle add document
+  const handleAddDocument = () => {
+    setUploadDialogOpen(true);
+  };
+
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
+  const [notificationError, setNotificationError] = useState(null);
+
+  // Fetch notifications
+  const fetchNotifications = async () => {
+    try {
+      setLoadingNotifications(true);
+      setNotificationError(null);
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      };
+      
+      const response = await axios.get(`${API_URL}/notifications/accountant`, config);
+      setNotifications(response.data || []);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      setNotificationError('Failed to load notifications');
+    } finally {
+      setLoadingNotifications(false);
+    }
+  };
+
+  // Mark notification as read
+  const markNotificationAsRead = async (notificationId) => {
+    try {
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      };
+      
+      await axios.put(`${API_URL}/notifications/${notificationId}/read`, {}, config);
+      setNotifications(notifications.map(notif => 
+        notif.id === notificationId ? { ...notif, read: true } : notif
+      ));
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
+  // Mark all notifications as read
+  const markAllAsRead = async () => {
+    try {
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      };
+      
+      await axios.put(`${API_URL}/notifications/read-all`, {}, config);
+      setNotifications(notifications.map(notif => ({ ...notif, read: true })));
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+    }
+  };
+
+  // Fetch notifications when component mounts
+  useEffect(() => {
+    if (token) {
+      fetchNotifications();
+    }
+  }, [token]);
+
+  // Get notification icon based on type
+  const getNotificationIcon = (type) => {
+    switch (type) {
+      case 'success':
+        return <Done sx={{ color: '#4caf50' }} />;
+      case 'warning':
+        return <Warning sx={{ color: '#ff9800' }} />;
+      case 'error':
+        return <ReportProblemOutlined sx={{ color: '#f44336' }} />;
+      default:
+        return <Info sx={{ color: '#2196f3' }} />;
+    }
+  };
+
+  // Format notification time
+  const formatNotificationTime = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - date) / 1000);
+    
+    if (diffInSeconds < 60) return 'Just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    return date.toLocaleDateString();
+  };
+
+  // Add this function near the top of the component
+  const handleMeClick = async () => {
+    try {
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      };
+      const response = await axios.get(`${API_URL}/auth/me`, config);
+      console.log('Profile response:', response.data);
+      if (response.data.profile) {
+        navigate(`/accountants/${response.data.profile.id}`);
+      } else {
+        console.error('No profile found');
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    }
+  };
+
   if (loading) {
     return (
       <Box 
@@ -332,121 +522,12 @@ const AccountantDashboard = () => {
     );
   }
 
+  console.log('Me button user:', user);
+
   return (
     <Box sx={{ display: 'flex', bgcolor: 'white', minHeight: '100vh', p: 0, fontFamily: 'Inter, sans-serif' }}>
-      {/* Sidebar */}
-      <Box
-        sx={{
-          width: 220,
-          flexShrink: 0,
-          bgcolor: 'white',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          minHeight: '100vh',
-          position: 'fixed',
-          left: 0,
-          top: 0,
-          zIndex: 10,
-          py: 3,
-          fontFamily: 'Inter, sans-serif',
-        }}
-      >
-        <Box>
-          <Box sx={{ px: 3, mb: 4 }}>
-            <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5, fontFamily: 'Inter, sans-serif', fontSize: 22 }}>DocsCompta</Typography>
-          </Box>
-          <List>
-            <ListItem 
-              button 
-              component={NavLink} 
-              to="/accountant/dashboard"
-              sx={{
-                '&.active': {
-                  bgcolor: '#f5f7fa',
-                  color: '#111',
-                  fontWeight: 700,
-                },
-                '&:hover': {
-                  bgcolor: '#f5f7fa',
-                },
-              }}
-            >
-              <ListItemIcon><DashboardOutlined sx={{ fontSize: 22 }} /></ListItemIcon>
-              <ListItemText primary={<span style={{fontWeight:600, fontSize:15}}>Dashboard</span>} />
-            </ListItem>
-            <ListItem 
-              button 
-              component={NavLink} 
-              to="/accountant/documents"
-              sx={{
-                '&.active': {
-                  bgcolor: '#f5f7fa',
-                  color: '#111',
-                  fontWeight: 700,
-                },
-                '&:hover': {
-                  bgcolor: '#f5f7fa',
-                },
-              }}
-            >
-              <ListItemIcon><DescriptionOutlined sx={{ fontSize: 22 }} /></ListItemIcon>
-              <ListItemText primary={<span style={{fontWeight:500, fontSize:15}}>Documents</span>} />
-            </ListItem>
-            <ListItem 
-              button 
-              component={NavLink} 
-              to="/accountant/reports"
-              sx={{
-                '&.active': {
-                  bgcolor: '#f5f7fa',
-                  color: '#111',
-                  fontWeight: 700,
-                },
-                '&:hover': {
-                  bgcolor: '#f5f7fa',
-                },
-              }}
-            >
-              <ListItemIcon><BarChartOutlined sx={{ fontSize: 22 }} /></ListItemIcon>
-              <ListItemText primary={<span style={{fontWeight:500, fontSize:15}}>Financial Reports</span>} />
-            </ListItem>
-            <ListItem 
-              button 
-              component={NavLink} 
-              to="/accountant/settings"
-              sx={{
-                '&.active': {
-                  bgcolor: '#f5f7fa',
-                  color: '#111',
-                  fontWeight: 700,
-                },
-                '&:hover': {
-                  bgcolor: '#f5f7fa',
-                },
-              }}
-            >
-              <ListItemIcon><SettingsOutlined sx={{ fontSize: 22 }} /></ListItemIcon>
-              <ListItemText primary={<span style={{fontWeight:500, fontSize:15}}>Settings</span>} />
-            </ListItem>
-          </List>
-        </Box>
-        {/* Companies section at the bottom */}
-        <Box sx={{ px: 3, pb: 2 }}>
-          <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700, mb: 1, display: 'block', fontSize: 12, letterSpacing: 1 }}>Companies</Typography>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            {companies.map((company) => (
-              <Box key={company.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                <Avatar sx={{ bgcolor: company.color, width: 28, height: 28, fontSize: 14 }}>{company.name[0]}</Avatar>
-                <Typography variant="body2" sx={{ fontWeight: 500, fontSize: 14 }}>{company.name}</Typography>
-              </Box>
-            ))}
-          </Box>
-        </Box>
-      </Box>
-
-      {/* Main content shifted right with margin */}
-      <Box sx={{ flexGrow: 1, ml: '220px', pl: 4, fontFamily: 'Inter, sans-serif', bgcolor: 'white' }}>
+      <Sidebar />
+      <Box sx={{ flexGrow: 1, fontFamily: 'Inter, sans-serif', bgcolor: 'white' }}>
         {/* Header */}
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 4, py: 3, bgcolor: '#f6f7ed', border: 'none' }}>
           <TextField
@@ -487,12 +568,235 @@ const AccountantDashboard = () => {
             }}
           />
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            <Button variant="outlined" sx={{ textTransform: 'none', bgcolor: 'white', borderColor: '#eee', fontWeight: 500, fontSize: 15, borderRadius: 2 }}>Sort by</Button>
-            <Button startIcon={<FilterList sx={{ fontSize: 20 }}/>} variant="outlined" sx={{ textTransform: 'none', bgcolor: 'white', borderColor: '#eee', fontWeight: 500, fontSize: 15, borderRadius: 2 }}>Filters</Button>
-            <Button startIcon={<Person sx={{ fontSize: 20 }}/>} variant="text" sx={{ textTransform: 'none', color: '#222', fontWeight: 500, fontSize: 15 }}>Me</Button>
-            <Button variant="contained" sx={{ textTransform: 'none', bgcolor: '#111', color: 'white', borderRadius: 2, fontWeight: 700, px: 3, fontSize: 15, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>+ Add document</Button>
+            <Button
+              startIcon={<AddBusiness sx={{ fontSize: 20 }}/>}
+              variant="outlined"
+              onClick={handleAddCompany}
+              sx={{ textTransform: 'none', bgcolor: 'white', borderColor: '#eee', fontWeight: 500, fontSize: 15, borderRadius: 2 }}
+            >
+              Add Company
+            </Button>
+            <IconButton
+              onClick={handleNotifications}
+              sx={{ position: 'relative' }}
+            >
+              <Badge badgeContent={notifications.length} color="error">
+                <Notifications sx={{ fontSize: 24 }} />
+              </Badge>
+            </IconButton>
+            {user && user.id ? (
+              <Button
+                startIcon={<Person sx={{ fontSize: 20 }}/>} 
+                variant="text"
+                onClick={handleMeClick}
+                sx={{ textTransform: 'none', color: '#222', fontWeight: 500, fontSize: 15 }}
+              >
+                Me
+              </Button>
+            ) : (
+              <Button
+                component={RouterLink}
+                to="/login"
+                variant="text"
+                sx={{ textTransform: 'none', color: '#222', fontWeight: 500, fontSize: 15 }}
+              >
+                Me
+              </Button>
+            )}
           </Box>
         </Box>
+
+        {/* Notifications Menu */}
+        <Dialog
+          open={showNotifications}
+          onClose={() => setShowNotifications(false)}
+          PaperProps={{
+            sx: {
+              position: 'absolute',
+              top: '80px',
+              right: '200px',
+              minWidth: '380px',
+              maxWidth: '380px',
+              borderRadius: 2,
+              boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+              overflow: 'hidden'
+            }
+          }}
+        >
+          <Box sx={{ 
+            p: 2, 
+            borderBottom: '1px solid #eee',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <Typography variant="h6" sx={{ fontWeight: 600, fontSize: 18 }}>
+              Notifications
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              {notifications.some(n => !n.read) && (
+                <Button
+                  size="small"
+                  onClick={markAllAsRead}
+                  sx={{ 
+                    textTransform: 'none',
+                    fontSize: 13,
+                    color: 'primary.main'
+                  }}
+                >
+                  Mark all as read
+                </Button>
+              )}
+              <IconButton 
+                size="small" 
+                onClick={() => setShowNotifications(false)}
+                sx={{ color: 'text.secondary' }}
+              >
+                <Close sx={{ fontSize: 20 }} />
+              </IconButton>
+            </Box>
+          </Box>
+
+          <Box sx={{ 
+            maxHeight: '400px', 
+            overflowY: 'auto',
+            '&::-webkit-scrollbar': {
+              width: '4px',
+            },
+            '&::-webkit-scrollbar-track': {
+              background: '#f1f1f1',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              background: '#888',
+              borderRadius: '4px',
+            },
+          }}>
+            {loadingNotifications ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                <CircularProgress size={24} />
+              </Box>
+            ) : notificationError ? (
+              <Box sx={{ p: 2, textAlign: 'center', color: 'error.main' }}>
+                {notificationError}
+              </Box>
+            ) : notifications.length === 0 ? (
+              <Box sx={{ 
+                p: 4, 
+                textAlign: 'center',
+                color: 'text.secondary'
+              }}>
+                <Notifications sx={{ fontSize: 40, color: '#eee', mb: 1 }} />
+                <Typography variant="body2">
+                  No notifications yet
+                </Typography>
+              </Box>
+            ) : (
+              notifications.map((notification) => (
+                <Box
+                  key={notification.id}
+                  sx={{
+                    p: 2,
+                    borderBottom: '1px solid #f5f5f5',
+                    bgcolor: notification.read ? 'transparent' : 'rgba(25, 118, 210, 0.04)',
+                    transition: 'background-color 0.2s',
+                    '&:hover': {
+                      bgcolor: 'rgba(0, 0, 0, 0.02)',
+                    },
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => markNotificationAsRead(notification.id)}
+                >
+                  <Box sx={{ display: 'flex', gap: 2 }}>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 40,
+                      height: 40,
+                      borderRadius: '50%',
+                      bgcolor: 'rgba(0, 0, 0, 0.04)'
+                    }}>
+                      {getNotificationIcon(notification.type)}
+                    </Box>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="subtitle2" sx={{ 
+                        fontWeight: notification.read ? 400 : 600,
+                        mb: 0.5,
+                        color: notification.read ? 'text.secondary' : 'text.primary'
+                      }}>
+                        {notification.title}
+                      </Typography>
+                      <Typography variant="body2" sx={{ 
+                        color: 'text.secondary',
+                        mb: 1,
+                        fontSize: 13
+                      }}>
+                        {notification.message}
+                      </Typography>
+                      <Typography variant="caption" sx={{ 
+                        color: 'text.secondary',
+                        fontSize: 12
+                      }}>
+                        {formatNotificationTime(notification.created_at)}
+                      </Typography>
+                    </Box>
+                    {!notification.read && (
+                      <Box sx={{ 
+                        width: 8, 
+                        height: 8, 
+                        borderRadius: '50%',
+                        bgcolor: 'primary.main',
+                        mt: 1
+                      }} />
+                    )}
+                  </Box>
+                </Box>
+              ))
+            )}
+          </Box>
+        </Dialog>
+
+        {/* Add Company Dialog */}
+        <Dialog
+          open={showAddCompany}
+          onClose={() => setShowAddCompany(false)}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>Add New Company</DialogTitle>
+          <DialogContent>
+            <Box sx={{ pt: 2 }}>
+              <TextField
+                fullWidth
+                label="Company Name"
+                variant="outlined"
+                sx={{ mb: 2 }}
+              />
+              <TextField
+                fullWidth
+                label="Company Address"
+                variant="outlined"
+                sx={{ mb: 2 }}
+              />
+              <TextField
+                fullWidth
+                label="Tax ID"
+                variant="outlined"
+                sx={{ mb: 2 }}
+              />
+              <TextField
+                fullWidth
+                label="Contact Email"
+                variant="outlined"
+                sx={{ mb: 2 }}
+              />
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setShowAddCompany(false)}>Cancel</Button>
+            <Button variant="contained" onClick={() => setShowAddCompany(false)}>Add Company</Button>
+          </DialogActions>
+        </Dialog>
 
         {/* Top Diagrams/Stats Section as a white card */}
         <Box sx={{ bgcolor: '#f6f7ed', px: 0, pt: 0, pb: 4 }}>
@@ -717,6 +1021,7 @@ const AccountantDashboard = () => {
             ))}
           </Box>
         </Box>
+        <Box sx={{ height: 120, bgcolor: 'white' }} />
       </Box>
 
       {/* Upload document dialog */}

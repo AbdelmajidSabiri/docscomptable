@@ -66,6 +66,23 @@ export const companyService = {
       console.error(`Error deleting company ${id}:`, error);
       throw error;
     }
+  },
+
+  uploadProfilePicture: async (companyId, file) => {
+    const formData = new FormData();
+    formData.append('profile_picture', file);
+    
+    const response = await axios.post(
+      `${API_URL}/companies/${companyId}/profile-picture`,
+      formData,
+      {
+        headers: {
+          ...authHeader(),
+          'Content-Type': 'multipart/form-data'
+        }
+      }
+    );
+    return response.data;
   }
 };
 
