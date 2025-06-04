@@ -1,26 +1,25 @@
 const jwt = require('jsonwebtoken');
 
-// Verify JWT token middleware
-const verifyToken = (req, res, next) => {
+const auth = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  let token;
+
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split(' ')[1];
+  } else {
+    token = req.header('x-auth-token');
+  }
+
+  if (!token) {
+    return res.status(401).json({ message: 'No token, authorization denied' });
+  }
+
   try {
-    // Get token from header
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ message: 'Access denied. No token provided' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    if (!token) {
-      return res.status(401).json({ message: 'Access denied. No token provided' });
-    }
-
-    // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_secret_key');
     req.user = decoded;
     next();
-  } catch (error) {
-    console.error('Token verification error:', error.message);
-    return res.status(401).json({ message: 'Invalid token' });
+  } catch (err) {
+    res.status(401).json({ message: 'Token is not valid' });
   }
 };
 
@@ -52,7 +51,7 @@ const isAdminOrAccountant = (req, res, next) => {
 };
 
 module.exports = {
-  verifyToken,
+  auth,
   isAdmin,
   isAccountant,
   isAdminOrAccountant

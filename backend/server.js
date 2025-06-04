@@ -14,6 +14,7 @@ const fs = require('fs');
 
 // Import routes
 const authRoutes = require('./routes/auth');
+const notificationRoutes = require('./routes/notifications');
 
 // Initialize the app
 const app = express();
@@ -155,6 +156,7 @@ const initDatabase = async () => {
         contact_name VARCHAR(255),
         contact_email VARCHAR(255),
         contact_phone VARCHAR(50),
+        profile_picture VARCHAR(255),
         status ENUM('active', 'inactive', 'pending') NOT NULL DEFAULT 'pending',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -426,6 +428,9 @@ app.get('/api/auth/profile', auth, async (req, res) => {
 
 // Routes
 app.use('/api/auth', authRoutes);
+
+// Register notification routes
+app.use('/api/notifications', notificationRoutes);
 
 // Company routes
 app.get('/api/companies', auth, async (req, res) => {
@@ -886,62 +891,6 @@ app.patch('/api/documents/:id/process', auth, async (req, res) => {
   }
 });
 
-// Get notifications for current user
-app.get('/api/notifications', async (req, res) => {
-  try {
-    // For development/testing purposes, return empty notifications array if not authenticated
-    if (!req.header('x-auth-token')) {
-      return res.json([]);
-    }
-    
-    try {
-      const token = req.header('x-auth-token');
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_secret_key');
-      req.user = decoded.user;
-      
-      const [notifications] = await pool.query(
-        'SELECT * FROM notifications WHERE recipient_type = ? AND recipient_id = ? ORDER BY created_at DESC',
-        [req.user.role, req.user.id]
-      );
-      
-      res.json(notifications);
-    } catch (err) {
-      // If token invalid, still return empty array for development
-      return res.json([]);
-    }
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Mark notification as read
-app.patch('/api/notifications/:id/read', auth, async (req, res) => {
-  try {
-    const notificationId = req.params.id;
-    
-    // Security check - user can only mark their own notifications
-    const [notifications] = await pool.query(
-      'SELECT * FROM notifications WHERE id = ? AND recipient_type = ? AND recipient_id = ?',
-      [notificationId, req.user.role, req.user.id]
-    );
-    
-    if (notifications.length === 0) {
-      return res.status(403).json({ message: 'Access denied' });
-    }
-    
-    await pool.query(
-      'UPDATE notifications SET is_read = TRUE WHERE id = ?',
-      [notificationId]
-    );
-    
-    res.json({ message: 'Notification marked as read' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
 // Get overview statistics (admin only)
 app.get('/api/stats/overview', async (req, res) => {
   try {
@@ -1276,37 +1225,34 @@ app.get('/api/accountants', auth, async (req, res) => {
 app.get('/api/accountants/:id', auth, async (req, res) => {
   try {
     const accountantId = req.params.id;
-    
     // Admins can view any accountant, accountants can only view themselves
     if (req.user.role === 'accountant') {
+      // Get the accountant row for this id
       const [accountants] = await pool.query(
-        'SELECT * FROM accountants WHERE user_id = ?',
-        [req.user.id]
+        'SELECT * FROM accountants WHERE id = ?',
+        [accountantId]
       );
-      
-      if (accountants.length === 0 || accountants[0].id != accountantId) {
+      if (
+        accountants.length === 0 ||
+        accountants[0].user_id !== req.user.id
+      ) {
         return res.status(403).json({ message: 'Access denied' });
       }
     } else if (req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Access denied' });
     }
-    
-    const [accountants] = await pool.query(`
-      SELECT a.*, u.email FROM accountants a
-      JOIN users u ON a.user_id = u.id
-      WHERE a.id = ?
-    `, [accountantId]);
-    
+    const [accountants] = await pool.query(
+      'SELECT a.*, u.email FROM accountants a JOIN users u ON a.user_id = u.id WHERE a.id = ?',
+      [accountantId]
+    );
     if (accountants.length === 0) {
       return res.status(404).json({ message: 'Accountant not found' });
     }
-    
     // Get companies assigned to this accountant
     const [companies] = await pool.query(
       'SELECT * FROM companies WHERE accountant_id = ?',
       [accountantId]
     );
-    
     res.json({
       accountant: accountants[0],
       companies
@@ -1339,17 +1285,11 @@ app.put('/api/accountants/:id', auth, async (req, res) => {
   }
 });
 
-// Initialize database and start server
-initDatabase()
-  .then(() => {
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
-  })
-  .catch(err => {
-    console.error('Failed to initialize database:', err);
-    process.exit(1);
-  });
+// Start server
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+  initDatabase();
+});
 
 // Handle unhandled rejections
 process.on('unhandledRejection', (err) => {
